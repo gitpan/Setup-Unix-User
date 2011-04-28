@@ -1,0 +1,135 @@
+NAME
+    Setup::Unix::User - Ensure existence of Unix user and its group
+    memberships
+
+VERSION
+    version 0.01
+
+SYNOPSIS
+     use Setup::Unix::User 'setup_unix_user';
+
+     # simple usage (doesn't save undo data)
+     my $res = setup_unix_user name => 'foo',
+                               members_of => ['admin', 'wheel'];
+     die unless $res->[0] == 200 || $res->[0] == 304;
+
+     # perform setup and save undo data (undo data should be serializable)
+     $res = setup_unix_user ..., -undo_action => 'do';
+     die unless $res->[0] == 200 || $res->[0] == 304;
+     my $undo_data = $res->[3]{undo_data};
+
+     # perform undo
+     $res = setup_unix_user ..., -undo_action => "undo", -undo_data=>$undo_data;
+     die unless $res->[0] == 200 || $res->[0] == 304;
+
+DESCRIPTION
+    This module provides one function: setup_unix_user.
+
+    This module is part of the Setup modules family.
+
+    This module uses Log::Any logging framework.
+
+    This module's functions have Sub::Spec specs.
+
+THE SETUP MODULES FAMILY
+    I use the "Setup::" namespace for the Setup modules family. See
+    "Setup::File" for more details on the goals, characteristics, and
+    implementation of Setup modules family.
+
+FUNCTIONS
+    None are exported by default, but they are exportable.
+
+  setup_unix_user(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
+    Ensure existence of Unix user and its group memberships.
+
+    On do, will create Unix user if not already exists.
+
+    Newly created user's group memberships, homedir and skeleton files can
+    also be created/copied automatically by this routine (utilizing
+    Setup::Dir and Setup::File).
+
+    On undo, will delete Unix user previously created (and/or remove/readd
+    groups to original state, remove homedirs, etc).
+
+    On redo, will recreate Unix user (and re-set memberships) with the same
+    UID.
+
+    Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error
+    code between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing
+    error message, RESULT is the actual result.
+
+    This function supports undo operation. See Sub::Spec::Clause::features
+    for details on how to perform do/undo/redo.
+
+    This function supports dry-run (simulation) mode. To run in dry-run
+    mode, add argument "-dry_run" => 1.
+
+    Arguments ("*" denotes required arguments):
+
+    *   create_home_dir => *bool* (default 1)
+
+        Whether to create homedir when creating new user.
+
+    *   member_of => *array*
+
+        List of Unix group names that the user must be member of.
+
+        The first element will be used as the primary group. If a group
+        doesn't exist, it will be ignored.
+
+        If not specified, the default is one group having the same name as
+        the user. The group will be created if not already exists.
+
+    *   name* => *str*
+
+        User name.
+
+    *   new_gecos => *str* (default "")
+
+        Set gecos (usually, full name) when creating new user.
+
+    *   new_home_dir => *str*
+
+        Set home directory when creating new user, defaults to
+        /home/<username>.
+
+    *   new_home_dir_mode => *int* (default 448)
+
+        Set permission mode of home dir when creating new user.
+
+    *   new_password => *str*
+
+        Set password when creating new user.
+
+        Default is a random password
+
+    *   new_shell => *str* (default "/bin/bash")
+
+        Set shell when creating new user.
+
+    *   not_member_of* => *str*
+
+        List of Unix group names that the user must NOT be member of.
+
+    *   skel_dir => *str* (default "/etc/skel")
+
+        Directory to get skeleton files when creating new user.
+
+    *   use_skel_dir => *bool* (default 1)
+
+        Whether to copy files from skeleton dir when creating new user.
+
+SEE ALSO
+    Setup::Unix::Group.
+
+    Other modules in Setup:: namespace.
+
+AUTHOR
+    Steven Haryanto <stevenharyanto@gmail.com>
+
+COPYRIGHT AND LICENSE
+    This software is copyright (c) 2011 by Steven Haryanto.
+
+    This is free software; you can redistribute it and/or modify it under
+    the same terms as the Perl 5 programming language system itself.
+

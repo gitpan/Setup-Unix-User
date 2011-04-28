@@ -1,0 +1,28 @@
+---
+abstract: 'Ensure existence of Unix user and its group memberships'
+author:
+  - 'Steven Haryanto <stevenharyanto@gmail.com>'
+build_requires:
+  Module::Build: 0.3601
+configure_requires:
+  Module::Build: 0.3601
+dynamic_config: 0
+generated_by: 'Dist::Zilla version 4.200004, CPAN::Meta::Converter version 2.110580'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Setup-Unix-User
+requires:
+  File::Slurp: 0
+  File::chdir: 0
+  Log::Any: 0
+  Passwd::Unix::Alt: 0.5204
+  Sub::Spec: 0.13
+  Test::More: 0.96
+  Text::Password::Pronounceable: 0
+  perl: 5.010000
+resources:
+  homepage: http://search.cpan.org/dist/Setup-Unix-User/
+  repository: http://github.com/sharyanto/perl-Setup-Unix-User
+version: 0.01
