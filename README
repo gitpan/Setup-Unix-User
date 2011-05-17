@@ -2,7 +2,7 @@ NAME
     Setup::Unix::User - Setup Unix user (existence, group memberships)
 
 VERSION
-    version 0.02
+    version 0.03
 
 SYNOPSIS
      use Setup::Unix::User 'setup_unix_user';
@@ -70,7 +70,7 @@ FUNCTIONS
 
         Default follows max_new_uid
 
-    *   max_new_uid => *str* (default 65535)
+    *   max_new_uid => *str* (default 65534)
 
         Set maximum UID when creating new user.
 
@@ -90,7 +90,7 @@ FUNCTIONS
 
         Default is UID
 
-    *   min_new_uid => *str* (default 1)
+    *   min_new_uid => *str* (default 0)
 
         Set minimum UID when creating new user.
 
@@ -124,6 +124,13 @@ FUNCTIONS
     *   not_member_of* => *str*
 
         List of Unix group names that the user must NOT be member of.
+
+    *   should_already_exist => *bool* (default 0)
+
+        If set to true, require that user already exists.
+
+        This can be used to fix user membership, but does not create user
+        when it doesn't exist.
 
     *   skel_dir => *str* (default "/etc/skel")
 

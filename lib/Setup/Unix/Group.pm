@@ -1,6 +1,6 @@
 package Setup::Unix::Group;
 BEGIN {
-  $Setup::Unix::Group::VERSION = '0.02';
+  $Setup::Unix::Group::VERSION = '0.03';
 }
 # ABSTRACT: Setup Unix group (existence)
 
@@ -34,11 +34,11 @@ _
         }],
         min_new_gid => ['int' => {
             summary => 'When creating new group, specify minimum GID',
-            default => 1,
+            default => 0,
         }],
         min_new_gid => ['int' => {
             summary => 'When creating new group, specify maximum GID',
-            default => 65535,
+            default => 65534,
         }],
     },
     features => {undo=>1, dry_run=>1},
@@ -195,7 +195,7 @@ Setup::Unix::Group - Setup Unix group (existence)
 
 =head1 VERSION
 
-version 0.02
+version 0.03
 
 =head1 SYNOPSIS
 
@@ -259,7 +259,7 @@ Arguments (C<*> denotes required arguments):
 
 =over 4
 
-=item * B<min_new_gid> => I<int> (default C<65535>)
+=item * B<min_new_gid> => I<int> (default C<65534>)
 
 When creating new group, specify maximum GID.
 

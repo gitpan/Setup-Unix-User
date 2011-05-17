@@ -1,5 +1,17 @@
 Revision history for Setup-Unix-User
 
+0.03    2011-05-17
+
+        [ENHANCEMENTS]
+
+        - setup_unix_user(): Add 'should_already_exist' parameter
+
+        [ETC]
+
+        - Change default max UID/GID from 65535 to 65534, to be compatible with
+          Debian
+
+
 0.02    2011-05-17
 
         [ENHANCEMENTS]

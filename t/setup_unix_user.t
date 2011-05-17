@@ -126,12 +126,30 @@ my %args2 = (
     name=>"u5", min_new_uid=>1000, max_new_uid=>1002,
     skel_dir=>"$tmp_dir/skel",
 );
+{
+    local $args2{should_already_exist} = 1;
+    test_setup_unix_user(
+        name       => "create (should_already_exist, fail)",
+        args       => {%args2},
+        status     => 412,
+        exists     => 0,
+    );
+}
 test_setup_unix_user(
-    name       => "create (min_new_uid, max_new_uid, fail)",
+    name       => "create (min_new_uid, max_new_uid, fail getting unused uid)",
     args       => {%args2},
     status     => 500,
     exists     => 0,
 );
+
+{
+    local $args{should_already_exist} = 1;
+    test_setup_unix_user(
+        name       => "create (should_already_exist, success)",
+        args       => {%args},
+        status     => 200, # should be 304, but we tried to add to group 'test'
+    );
+}
 
 $args{member_of} = ["u2"];
 $args{not_member_of} = ["bin"];

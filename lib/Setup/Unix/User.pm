@@ -1,6 +1,6 @@
 package Setup::Unix::User;
 BEGIN {
-  $Setup::Unix::User::VERSION = '0.02';
+  $Setup::Unix::User::VERSION = '0.03';
 }
 # ABSTRACT: Setup Unix user (existence, group memberships)
 
@@ -53,6 +53,16 @@ _
         name => ['str*' => {
             summary => 'User name',
         }],
+        should_already_exist => ['bool' => {
+            summary => 'If set to true, require that user already exists',
+            description => <<'_',
+
+This can be used to fix user membership, but does not create user when it
+doesn't exist.
+
+_
+            default => 0,
+        }],
         member_of => ['array' => {
             summary => 'List of Unix group names that the user must be '.
                 'member of',
@@ -74,11 +84,11 @@ _
         }],
         min_new_uid => ['str' => {
             summary => 'Set minimum UID when creating new user',
-            default => 1,
+            default => 0,
         }],
         max_new_uid => ['str' => {
             summary => 'Set maximum UID when creating new user',
-            default => 65535,
+            default => 65534,
         }],
         min_new_gid => ['str' => {
             summary => 'Set minimum GID when creating new group',
@@ -175,6 +185,8 @@ sub setup_unix_user {
             my @u = $pu->user($name);
             if (!@u) {
                 $log->tracef("nok: unix user $name doesn't exist");
+                return [412, "user must already exist"]
+                    if $args{should_already_exist};
                 push @$steps, ["create", "fix_membership", ""];
                 last;
             }
@@ -522,7 +534,7 @@ Setup::Unix::User - Setup Unix user (existence, group memberships)
 
 =head1 VERSION
 
-version 0.02
+version 0.03
 
 =head1 SYNOPSIS
 
@@ -598,7 +610,7 @@ Set maximum GID when creating new group.
 
 Default follows max_new_uid
 
-=item * B<max_new_uid> => I<str> (default C<65535>)
+=item * B<max_new_uid> => I<str> (default C<65534>)
 
 Set maximum UID when creating new user.
 
@@ -618,7 +630,7 @@ Set minimum GID when creating new group.
 
 Default is UID
 
-=item * B<min_new_uid> => I<str> (default C<1>)
+=item * B<min_new_uid> => I<str> (default C<0>)
 
 Set minimum UID when creating new user.
 
@@ -651,6 +663,13 @@ Set shell when creating new user.
 =item * B<not_member_of>* => I<str>
 
 List of Unix group names that the user must NOT be member of.
+
+=item * B<should_already_exist> => I<bool> (default C<0>)
+
+If set to true, require that user already exists.
+
+This can be used to fix user membership, but does not create user when it
+doesn't exist.
 
 =item * B<skel_dir> => I<str> (default C<"/etc/skel">)
 
