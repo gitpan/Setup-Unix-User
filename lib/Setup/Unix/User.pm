@@ -1,8 +1,8 @@
 package Setup::Unix::User;
 BEGIN {
-  $Setup::Unix::User::VERSION = '0.01';
+  $Setup::Unix::User::VERSION = '0.02';
 }
-# ABSTRACT: Ensure existence of Unix user and its group memberships
+# ABSTRACT: Setup Unix user (existence, group memberships)
 
 use 5.010;
 use strict;
@@ -38,19 +38,15 @@ sub _rand_pass {
 }
 
 $SPEC{setup_unix_user} = {
-    summary  => "Ensure existence of Unix user and its group memberships",
+    summary  => "Setup Unix user (existence, group memberships)",
     description => <<'_',
 
-On do, will create Unix user if not already exists.
+On do, will create Unix user if not already exists. And also make sure user
+belong to specified groups (and not belong to unwanted groups).
 
-Newly created user's group memberships, homedir and skeleton files can also be
-created/copied automatically by this routine (utilizing Setup::Dir and
-Setup::File).
-
-On undo, will delete Unix user previously created (and/or remove/readd groups to
-original state, remove homedirs, etc).
-
-On redo, will recreate Unix user (and re-set memberships) with the same UID.
+On undo, will delete Unix user (along with its initially created home dir and
+files) if it was created by this function. Also will restore old group
+memberships.
 
 _
     args => {
@@ -75,6 +71,22 @@ _
             summary => 'List of Unix group names that the user must NOT be '.
                 'member of',
             of => 'str*',
+        }],
+        min_new_uid => ['str' => {
+            summary => 'Set minimum UID when creating new user',
+            default => 1,
+        }],
+        max_new_uid => ['str' => {
+            summary => 'Set maximum UID when creating new user',
+            default => 65535,
+        }],
+        min_new_gid => ['str' => {
+            summary => 'Set minimum GID when creating new group',
+            description => 'Default is UID',
+        }],
+        max_new_gid => ['str' => {
+            summary => 'Set maximum GID when creating new group',
+            description => 'Default follows max_new_uid',
         }],
         new_password => ['str' => {
             summary => 'Set password when creating new user',
@@ -115,7 +127,6 @@ _
 };
 sub setup_unix_user {
     my %args           = @_;
-    $log->tracef("=> setup_unix_user(%s)", \%args); # TMP
     my $dry_run        = $args{-dry_run};
     my $undo_action    = $args{-undo_action} // "";
 
@@ -231,14 +242,31 @@ sub setup_unix_user {
                 # user already exists with correct uid/gid, skip this step
                 next STEP;
             }
-            if (!defined($uid)) {
+            my $found = defined($uid);
+            my $minuid = $args{min_new_uid} // 1;
+            my $maxuid = $args{max_new_uid} // 65535;
+            if (!$found) {
                 $log->trace("finding an unused UID ...");
                 my @uids = map {($pu->user($_))[1]} $pu->users;
-                $uid = $args{min_new_uid} // 1;
-                while (1) { last unless $uid ~~ @uids; $uid++ }
-                $log->tracef("found unused UID: %d", $uid);
+                $uid = $minuid;
+                while (1) {
+                    last if $uid > $maxuid;
+                    unless ($uid ~~ @uids) {
+                        $log->tracef("found unused UID: %d", $uid);
+                        $found++;
+                        last;
+                    }
+                    $uid++;
+                }
             }
-            if (!defined($gid)) {
+            if (!$found) {
+                $err = "Can't find unused UID";
+                goto CHECK_ERR;
+            }
+            $found = defined($gid);
+            my $mingid = $args{min_new_gid} // $uid;
+            my $maxgid = $args{max_new_gid} // $maxuid;
+            if (!$found) {
                 my @g = $pu->group($name);
                 if ($g[0]) {
                     $gid = $g[0];
@@ -250,7 +278,8 @@ sub setup_unix_user {
                         _shadow_path  => $shadow_path,
                         _group_path   => $group_path,
                         _gshadow_path => $gshadow_path,
-                        min_new_gid   => $uid,
+                        min_new_gid   => $mingid,
+                        max_new_gid   => $maxgid,
                     );
                     my $res = setup_unix_group(
                         %s_args, -undo_action => $save_undo ? 'do' : undef);
@@ -489,11 +518,11 @@ sub setup_unix_user {
 
 =head1 NAME
 
-Setup::Unix::User - Ensure existence of Unix user and its group memberships
+Setup::Unix::User - Setup Unix user (existence, group memberships)
 
 =head1 VERSION
 
-version 0.01
+version 0.02
 
 =head1 SYNOPSIS
 
@@ -501,7 +530,7 @@ version 0.01
 
  # simple usage (doesn't save undo data)
  my $res = setup_unix_user name => 'foo',
-                           members_of => ['admin', 'wheel'];
+                           member_of => ['admin', 'wheel'];
  die unless $res->[0] == 200 || $res->[0] == 304;
 
  # perform setup and save undo data (undo data should be serializable)
@@ -525,7 +554,7 @@ This module's functions have L<Sub::Spec> specs.
 
 =head1 THE SETUP MODULES FAMILY
 
-I use the C<Setup::> namespace for the Setup modules family. See C<Setup::File>
+I use the C<Setup::> namespace for the Setup modules family. See L<Setup::File>
 for more details on the goals, characteristics, and implementation of Setup
 modules family.
 
@@ -536,18 +565,14 @@ None are exported by default, but they are exportable.
 =head2 setup_unix_user(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
 
 
-Ensure existence of Unix user and its group memberships.
+Setup Unix user (existence, group memberships).
 
-On do, will create Unix user if not already exists.
+On do, will create Unix user if not already exists. And also make sure user
+belong to specified groups (and not belong to unwanted groups).
 
-Newly created user's group memberships, homedir and skeleton files can also be
-created/copied automatically by this routine (utilizing Setup::Dir and
-Setup::File).
-
-On undo, will delete Unix user previously created (and/or remove/readd groups to
-original state, remove homedirs, etc).
-
-On redo, will recreate Unix user (and re-set memberships) with the same UID.
+On undo, will delete Unix user (along with its initially created home dir and
+files) if it was created by this function. Also will restore old group
+memberships.
 
 Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
 between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
@@ -567,6 +592,16 @@ Arguments (C<*> denotes required arguments):
 
 Whether to create homedir when creating new user.
 
+=item * B<max_new_gid> => I<str>
+
+Set maximum GID when creating new group.
+
+Default follows max_new_uid
+
+=item * B<max_new_uid> => I<str> (default C<65535>)
+
+Set maximum UID when creating new user.
+
 =item * B<member_of> => I<array>
 
 List of Unix group names that the user must be member of.
@@ -576,6 +611,16 @@ it will be ignored.
 
 If not specified, the default is one group having the same name as the user. The
 group will be created if not already exists.
+
+=item * B<min_new_gid> => I<str>
+
+Set minimum GID when creating new group.
+
+Default is UID
+
+=item * B<min_new_uid> => I<str> (default C<1>)
+
+Set minimum UID when creating new user.
 
 =item * B<name>* => I<str>
 

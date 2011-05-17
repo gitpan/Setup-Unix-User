@@ -30,10 +30,10 @@ test_setup_unix_group(
     },
 );
 test_setup_unix_group(
-    name       => "create (with undo, min_new_gid)",
-    args       => {name=>"g2", min_new_gid=>1000, -undo_action=>"do"},
+    name       => "create (with undo, min_new_gid, max_new_guid)",
+    args       => {name=>"g2", min_new_gid=>1000, max_new_gid=>1002,
+                   -undo_action=>"do"},
     status     => 200,
-    is_file    => 1,
     posttest   => sub {
         my $res = shift;
         $undo_data = $res->[3]{undo_data};
@@ -75,10 +75,28 @@ test_setup_unix_group(
         my $res = shift;
         $undo_data = $res->[3]{undo_data};
         ok($undo_data, "there is undo data");
+        is($res->[2]{gid}, 1001, "recreated with same gid");
     },
 );
 
-# XXX test: can't redo because gid is occupied
+# at this point, existing groups: u1=1000, g2=1001, u2=1002
+test_setup_unix_group(
+    name       => "create (min_new_gid & max_new_gid, failed)",
+    args       => {name=>"g3", min_new_gid=>1000, max_new_gid=>1002},
+    status     => 500,
+    exists     => 0,
+);
+test_setup_unix_group(
+    name       => "create (min_new_gid & max_new_gid, success)",
+    args       => {name=>"g3", min_new_gid=>1000, max_new_gid=>1003},
+    status     => 200,
+    posttest   => sub {
+        my $res = shift;
+        is($res->[2]{gid}, 1003, "gid");
+    },
+);
+
+# at this point, existing groups: u1=1000, g2=1001, u2=1002, g3=1003
 
 DONE_TESTING:
 teardown();

@@ -1,8 +1,8 @@
 package Setup::Unix::Group;
 BEGIN {
-  $Setup::Unix::Group::VERSION = '0.01';
+  $Setup::Unix::Group::VERSION = '0.02';
 }
-# ABSTRACT: Make sure a Unix group exists
+# ABSTRACT: Setup Unix group (existence)
 
 use 5.010;
 use strict;
@@ -18,12 +18,14 @@ use Passwd::Unix::Alt;
 our %SPEC;
 
 $SPEC{setup_unix_group} = {
-    summary  => "Makes sure a Unix group exists",
+    summary  => "Setup Unix group (existence)",
     description => <<'_',
 
 On do, will create Unix group if not already exists.
 
 On undo, will delete Unix group previously created.
+
+On redo, will recreate the Unix group with the same GID.
 
 _
     args => {
@@ -34,12 +36,15 @@ _
             summary => 'When creating new group, specify minimum GID',
             default => 1,
         }],
+        min_new_gid => ['int' => {
+            summary => 'When creating new group, specify maximum GID',
+            default => 65535,
+        }],
     },
     features => {undo=>1, dry_run=>1},
 };
 sub setup_unix_group {
     my %args           = @_;
-    $log->tracef("=> setup_unix_group(%s)", \%args);
     my $dry_run        = $args{-dry_run};
     my $undo_action    = $args{-undo_action} // "";
 
@@ -94,7 +99,6 @@ sub setup_unix_group {
   STEP:
     for my $i (0..@$steps-1) {
         my $step = $steps->[$i];
-        next unless defined $step; # can happen even when steps=[], due to redo
         $log->tracef("step %d of 0..%d: %s", $i, @$steps-1, $step);
         my $err;
         return [400, "Invalid step (not array)"] unless ref($step) eq 'ARRAY';
@@ -116,13 +120,26 @@ sub setup_unix_group {
                         " (we need to create GID $g[0])";
                 }
             } else {
-                if (!defined($gid)) {
+                my $found = defined($gid);
+                if (!$found) {
                     $log->trace("finding an unused GID ...");
                     my @gids = map {($pu->group($_))[0]} $pu->groups;
                     #$log->tracef("gids = %s", \@gids);
                     $gid = $args{min_new_gid} // 1;
-                    while (1) { last unless $gid ~~ @gids; $gid++ }
-                    $log->tracef("found unused GID: %d", $gid);
+                    my $max = $args{max_new_gid} // 65535;
+                    while (1) {
+                        last if $gid > $max;
+                        unless ($gid ~~ @gids) {
+                            $log->tracef("found unused GID: %d", $gid);
+                            $found++;
+                            last;
+                        }
+                        $gid++;
+                    }
+                }
+                if (!$found) {
+                    $err = "Can't find unused GID";
+                    goto CHECK_ERR;
                 }
                 $pu->group($name, $gid, []);
                 if ($Passwd::Unix::Alt::errstr) {
@@ -141,7 +158,7 @@ sub setup_unix_group {
             if ($Passwd::Unix::Alt::errstr) {
                 $err = $Passwd::Unix::Alt::errstr;
             } else {
-                unshift @$undo_steps, ['create', $gid];
+                unshift @$undo_steps, ['create', $g[0]];
             }
         } else {
             die "BUG: Unknown step command: $step->[0]";
@@ -174,11 +191,11 @@ sub setup_unix_group {
 
 =head1 NAME
 
-Setup::Unix::Group - Make sure a Unix group exists
+Setup::Unix::Group - Setup Unix group (existence)
 
 =head1 VERSION
 
-version 0.01
+version 0.02
 
 =head1 SYNOPSIS
 
@@ -209,7 +226,7 @@ This module's functions have L<Sub::Spec> specs.
 
 =head1 THE SETUP MODULES FAMILY
 
-I use the C<Setup::> namespace for the Setup modules family. See C<Setup::File>
+I use the C<Setup::> namespace for the Setup modules family. See L<Setup::File>
 for more details on the goals, characteristics, and implementation of Setup
 modules family.
 
@@ -220,11 +237,13 @@ None are exported by default, but they are exportable.
 =head2 setup_unix_group(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
 
 
-Makes sure a Unix group exists.
+Setup Unix group (existence).
 
 On do, will create Unix group if not already exists.
 
 On undo, will delete Unix group previously created.
+
+On redo, will recreate the Unix group with the same GID.
 
 Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
 between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
@@ -240,9 +259,9 @@ Arguments (C<*> denotes required arguments):
 
 =over 4
 
-=item * B<min_new_gid> => I<int> (default C<1>)
+=item * B<min_new_gid> => I<int> (default C<65535>)
 
-When creating new group, specify minimum GID.
+When creating new group, specify maximum GID.
 
 =item * B<name>* => I<str>
 

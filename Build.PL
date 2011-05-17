@@ -12,12 +12,12 @@ my %module_build_args = (
   'configure_requires' => {
     'Module::Build' => '0.3601'
   },
-  'dist_abstract' => 'Ensure existence of Unix user and its group memberships',
+  'dist_abstract' => 'Setup Unix user (existence, group memberships)',
   'dist_author' => [
     'Steven Haryanto <stevenharyanto@gmail.com>'
   ],
   'dist_name' => 'Setup-Unix-User',
-  'dist_version' => '0.01',
+  'dist_version' => '0.02',
   'license' => 'perl',
   'module_name' => 'Setup::Unix::User',
   'recommends' => {},
@@ -26,7 +26,7 @@ my %module_build_args = (
     'File::Slurp' => '0',
     'File::chdir' => '0',
     'Log::Any' => '0',
-    'Passwd::Unix::Alt' => '0.5204',
+    'Passwd::Unix::Alt' => '0.5205',
     'Sub::Spec' => '0.13',
     'Test::More' => '0.96',
     'Text::Password::Pronounceable' => '0',
