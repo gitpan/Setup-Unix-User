@@ -25,4 +25,4 @@ requires:
 resources:
   homepage: http://search.cpan.org/dist/Setup-Unix-User/
   repository: http://github.com/sharyanto/perl-Setup-Unix-User
-version: 0.03
+version: 0.04

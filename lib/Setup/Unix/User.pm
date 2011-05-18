@@ -1,6 +1,6 @@
 package Setup::Unix::User;
 BEGIN {
-  $Setup::Unix::User::VERSION = '0.03';
+  $Setup::Unix::User::VERSION = '0.04';
 }
 # ABSTRACT: Setup Unix user (existence, group memberships)
 
@@ -184,7 +184,7 @@ sub setup_unix_user {
         {
             my @u = $pu->user($name);
             if (!@u) {
-                $log->tracef("nok: unix user $name doesn't exist");
+                $log->infof("nok: unix user $name doesn't exist");
                 return [412, "user must already exist"]
                     if $args{should_already_exist};
                 push @$steps, ["create", "fix_membership", ""];
@@ -196,13 +196,13 @@ sub setup_unix_user {
             my @membership = _get_user_membership($name, $pu);
             for (@$member_of) {
                 unless ($_ ~~ @membership) {
-                    $log->tracef("nok: should be member of $_ but isn't");
+                    $log->info("nok: should be member of $_ but isn't");
                     push @$steps, ["add_group", $_];
                 }
             }
             for (@$not_member_of) {
                 if ($_ ~~ @membership) {
-                    $log->tracef("nok: should NOT be member of $_ but is");
+                    $log->info("nok: should NOT be member of $_ but is");
                     push @$steps, ["remove_group", $_];
                 }
             }
@@ -534,7 +534,7 @@ Setup::Unix::User - Setup Unix user (existence, group memberships)
 
 =head1 VERSION
 
-version 0.03
+version 0.04
 
 =head1 SYNOPSIS
 

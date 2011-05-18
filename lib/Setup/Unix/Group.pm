@@ -1,6 +1,6 @@
 package Setup::Unix::Group;
 BEGIN {
-  $Setup::Unix::Group::VERSION = '0.03';
+  $Setup::Unix::Group::VERSION = '0.04';
 }
 # ABSTRACT: Setup Unix group (existence)
 
@@ -80,7 +80,7 @@ sub setup_unix_group {
                 if $Passwd::Unix::Alt::errstr &&
                     $Passwd::Unix::Alt::errstr !~ /unknown group/i;
             if (!$g[0]) {
-                $log->tracef("nok: unix group $name doesn't exist");
+                $log->info("nok: unix group $name doesn't exist");
                 push @$steps, ["create"];
                 last;
             }
@@ -195,7 +195,7 @@ Setup::Unix::Group - Setup Unix group (existence)
 
 =head1 VERSION
 
-version 0.03
+version 0.04
 
 =head1 SYNOPSIS
 

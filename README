@@ -2,7 +2,7 @@ NAME
     Setup::Unix::User - Setup Unix user (existence, group memberships)
 
 VERSION
-    version 0.03
+    version 0.04
 
 SYNOPSIS
      use Setup::Unix::User 'setup_unix_user';
