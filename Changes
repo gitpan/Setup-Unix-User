@@ -1,5 +1,10 @@
 Revision history for Setup-Unix-User
 
+0.05    2011-05-18
+
+        No functional changes. Tweaked log messages.
+
+
 0.04    2011-05-18
 
         No functional changes. Changed logging levels.

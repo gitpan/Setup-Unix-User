@@ -1,6 +1,6 @@
 package Setup::Unix::User;
 BEGIN {
-  $Setup::Unix::User::VERSION = '0.04';
+  $Setup::Unix::User::VERSION = '0.05';
 }
 # ABSTRACT: Setup Unix user (existence, group memberships)
 
@@ -196,13 +196,15 @@ sub setup_unix_user {
             my @membership = _get_user_membership($name, $pu);
             for (@$member_of) {
                 unless ($_ ~~ @membership) {
-                    $log->info("nok: should be member of $_ but isn't");
+                    $log->info("nok: unix user $name should be ".
+                                   "member of $_ but isn't");
                     push @$steps, ["add_group", $_];
                 }
             }
             for (@$not_member_of) {
                 if ($_ ~~ @membership) {
-                    $log->info("nok: should NOT be member of $_ but is");
+                    $log->info("nok: unix user $name should NOT be ".
+                                   "member of $_ but is");
                     push @$steps, ["remove_group", $_];
                 }
             }
@@ -534,7 +536,7 @@ Setup::Unix::User - Setup Unix user (existence, group memberships)
 
 =head1 VERSION
 
-version 0.04
+version 0.05
 
 =head1 SYNOPSIS
 
