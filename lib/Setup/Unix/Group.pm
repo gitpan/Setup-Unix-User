@@ -1,6 +1,6 @@
 package Setup::Unix::Group;
 BEGIN {
-  $Setup::Unix::Group::VERSION = '0.05';
+  $Setup::Unix::Group::VERSION = '0.06';
 }
 # ABSTRACT: Setup Unix group (existence)
 
@@ -195,7 +195,7 @@ Setup::Unix::Group - Setup Unix group (existence)
 
 =head1 VERSION
 
-version 0.05
+version 0.06
 
 =head1 SYNOPSIS
 

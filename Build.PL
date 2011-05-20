@@ -17,7 +17,7 @@ my %module_build_args = (
     'Steven Haryanto <stevenharyanto@gmail.com>'
   ],
   'dist_name' => 'Setup-Unix-User',
-  'dist_version' => '0.05',
+  'dist_version' => '0.06',
   'license' => 'perl',
   'module_name' => 'Setup::Unix::User',
   'recommends' => {},
@@ -27,6 +27,7 @@ my %module_build_args = (
     'File::chdir' => '0',
     'Log::Any' => '0',
     'Passwd::Unix::Alt' => '0.5205',
+    'Setup::File' => '0',
     'Sub::Spec' => '0.13',
     'Test::More' => '0.96',
     'Text::Password::Pronounceable' => '0',

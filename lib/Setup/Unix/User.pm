@@ -1,6 +1,6 @@
 package Setup::Unix::User;
 BEGIN {
-  $Setup::Unix::User::VERSION = '0.05';
+  $Setup::Unix::User::VERSION = '0.06';
 }
 # ABSTRACT: Setup Unix user (existence, group memberships)
 
@@ -536,7 +536,7 @@ Setup::Unix::User - Setup Unix user (existence, group memberships)
 
 =head1 VERSION
 
-version 0.05
+version 0.06
 
 =head1 SYNOPSIS
 

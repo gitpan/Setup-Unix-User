@@ -18,6 +18,7 @@ requires:
   File::chdir: 0
   Log::Any: 0
   Passwd::Unix::Alt: 0.5205
+  Setup::File: 0
   Sub::Spec: 0.13
   Test::More: 0.96
   Text::Password::Pronounceable: 0
@@ -25,4 +26,4 @@ requires:
 resources:
   homepage: http://search.cpan.org/dist/Setup-Unix-User/
   repository: http://github.com/sharyanto/perl-Setup-Unix-User
-version: 0.05
+version: 0.06
