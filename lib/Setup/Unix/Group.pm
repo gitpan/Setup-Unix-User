@@ -1,8 +1,4 @@
 package Setup::Unix::Group;
-BEGIN {
-  $Setup::Unix::Group::VERSION = '0.06';
-}
-# ABSTRACT: Setup Unix group (existence)
 
 use 5.010;
 use strict;
@@ -15,13 +11,16 @@ our @EXPORT_OK = qw(setup_unix_group);
 
 use Passwd::Unix::Alt;
 
+our $VERSION = '0.07'; # VERSION
+
 our %SPEC;
 
 $SPEC{setup_unix_group} = {
     summary  => "Setup Unix group (existence)",
     description => <<'_',
 
-On do, will create Unix group if not already exists.
+On do, will create Unix group if not already exists. The created GID will be
+returned in the result.
 
 On undo, will delete Unix group previously created.
 
@@ -125,8 +124,10 @@ sub setup_unix_group {
                     $log->trace("finding an unused GID ...");
                     my @gids = map {($pu->group($_))[0]} $pu->groups;
                     #$log->tracef("gids = %s", \@gids);
+                    my $max;
+                    # we shall search a range for a free gid
                     $gid = $args{min_new_gid} // 1;
-                    my $max = $args{max_new_gid} // 65535;
+                    $max = $args{max_new_gid} // 65535;
                     while (1) {
                         last if $gid > $max;
                         unless ($gid ~~ @gids) {
@@ -185,6 +186,7 @@ sub setup_unix_group {
     return [@$steps ? 200 : 304, @$steps ? "OK" : "Nothing done", $data, $meta];
 }
 1;
+# ABSTRACT: Setup Unix group (existence)
 
 
 =pod
@@ -195,7 +197,7 @@ Setup::Unix::Group - Setup Unix group (existence)
 
 =head1 VERSION
 
-version 0.06
+version 0.07
 
 =head1 SYNOPSIS
 
@@ -239,7 +241,8 @@ None are exported by default, but they are exportable.
 
 Setup Unix group (existence).
 
-On do, will create Unix group if not already exists.
+On do, will create Unix group if not already exists. The created GID will be
+returned in the result.
 
 On undo, will delete Unix group previously created.
 
@@ -268,6 +271,15 @@ When creating new group, specify maximum GID.
 Group name.
 
 =back
+
+=head1 FAQ
+
+=head2 How to create group with a specific GID?
+
+Set C<min_new_gid> and C<max_new_gid> to your desired value. Note that the
+function will report failure if when wanting to create a group, the desired GID
+is already taken. But the function will not report failure if the group already
+exists, even with a different GID.
 
 =head1 SEE ALSO
 

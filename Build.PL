@@ -12,12 +12,12 @@ my %module_build_args = (
   'configure_requires' => {
     'Module::Build' => '0.3601'
   },
-  'dist_abstract' => 'Setup Unix user (existence, group memberships)',
+  'dist_abstract' => 'Setup Unix user (existence, home dir, group memberships)',
   'dist_author' => [
     'Steven Haryanto <stevenharyanto@gmail.com>'
   ],
   'dist_name' => 'Setup-Unix-User',
-  'dist_version' => '0.06',
+  'dist_version' => '0.07',
   'license' => 'perl',
   'module_name' => 'Setup::Unix::User',
   'recommends' => {},

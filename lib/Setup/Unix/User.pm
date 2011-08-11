@@ -1,8 +1,4 @@
 package Setup::Unix::User;
-BEGIN {
-  $Setup::Unix::User::VERSION = '0.06';
-}
-# ABSTRACT: Setup Unix user (existence, group memberships)
 
 use 5.010;
 use strict;
@@ -20,6 +16,8 @@ use Text::Password::Pronounceable;
 require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(setup_unix_user);
+
+our $VERSION = '0.07'; # VERSION
 
 our %SPEC;
 
@@ -68,11 +66,8 @@ _
                 'member of',
             description => <<'_',
 
-The first element will be used as the primary group. If a group doesn't exist,
-it will be ignored.
-
-If not specified, the default is one group having the same name as the user. The
-group will be created if not already exists.
+If not specified, member_of will be set to just the primary group. The primary
+group will always be added even if not specified.
 
 _
             of => 'str*',
@@ -132,6 +127,16 @@ _
                 'when creating new user',
             default => 1,
         }],
+        primary_group => ['str' => {
+            summary => "Specify user's primary group",
+            description => <<'_',
+
+In Unix systems, a user must be a member of at least one group. This group is
+referred to as the primary group. By default, primary group name is the same as
+the user name. The group will be created if not exists.
+
+_
+        }],
     },
     features => {undo=>1, dry_run=>1},
 };
@@ -152,8 +157,9 @@ sub setup_unix_user {
     my $create_home_dir   = $args{create_home_dir}   // 1;
     my $use_skel_dir      = $args{use_skel_dir}      // 1;
     my $skel_dir          = $args{skel_dir}          // "/etc/skel";
+    my $primary_group     = $args{primary_group}     // $name;
     my $member_of         = $args{member_of} // [];
-    push @$member_of, $name unless $name ~~ @$member_of;
+    push @$member_of, $primary_group unless $primary_group ~~ @$member_of;
     my $not_member_of     = $args{not_member_of} // [];
     for (@$member_of) {
         return [400, "Group $_ is in member_of and not_member_of"]
@@ -280,14 +286,16 @@ sub setup_unix_user {
             $found = defined($gid);
             my $mingid = $args{min_new_gid} // $uid;
             my $maxgid = $args{max_new_gid} // $maxuid;
+            my $pgroup = $primary_group     // $name;
             if (!$found) {
-                my @g = $pu->group($name);
+                my @g = $pu->group($pgroup);
                 if ($g[0]) {
                     $gid = $g[0];
                 } else {
-                    $log->trace("Creating Unix group $name ...");
+                    $log->trace("Creating primary group for user $name: ".
+                                    "$pgroup ...");
                     my %s_args = (
-                        name          => $name,
+                        name          => $pgroup,
                         _passwd_path  => $passwd_path,
                         _shadow_path  => $shadow_path,
                         _group_path   => $group_path,
@@ -299,7 +307,8 @@ sub setup_unix_user {
                         %s_args, -undo_action => $save_undo ? 'do' : undef);
                     $log->tracef("res from setup_unix_group: %s", $res);
                     if ($res->[0] != 200) {
-                        $err = "Can't setup Unix group: $res->[0] - $res->[1]";
+                        $err = "Can't setup Unix group $pgroup: ".
+                            "$res->[0] - $res->[1]";
                     } else {
                         $gid = $res->[2]{gid};
                         unshift @$undo_steps,
@@ -526,17 +535,18 @@ sub setup_unix_user {
 }
 
 1;
+# ABSTRACT: Setup Unix user (existence, home dir, group memberships)
 
 
 =pod
 
 =head1 NAME
 
-Setup::Unix::User - Setup Unix user (existence, group memberships)
+Setup::Unix::User - Setup Unix user (existence, home dir, group memberships)
 
 =head1 VERSION
 
-version 0.06
+version 0.07
 
 =head1 SYNOPSIS
 
@@ -620,11 +630,8 @@ Set maximum UID when creating new user.
 
 List of Unix group names that the user must be member of.
 
-The first element will be used as the primary group. If a group doesn't exist,
-it will be ignored.
-
-If not specified, the default is one group having the same name as the user. The
-group will be created if not already exists.
+If not specified, member_of will be set to just the primary group. The primary
+group will always be added even if not specified.
 
 =item * B<min_new_gid> => I<str>
 
@@ -666,6 +673,14 @@ Set shell when creating new user.
 
 List of Unix group names that the user must NOT be member of.
 
+=item * B<primary_group> => I<str>
+
+Specify user's primary group.
+
+In Unix systems, a user must be a member of at least one group. This group is
+referred to as the primary group. By default, primary group name is the same as
+the user name. The group will be created if not exists.
+
 =item * B<should_already_exist> => I<bool> (default C<0>)
 
 If set to true, require that user already exists.
@@ -682,6 +697,21 @@ Directory to get skeleton files when creating new user.
 Whether to copy files from skeleton dir when creating new user.
 
 =back
+
+=head1 FAQ
+
+=head2 How to create user with a specific UID and/or GID?
+
+Set C<min_new_uid> and C<max_new_uid> (and/or C<min_new_gid> and C<max_new_gid>)
+to your desired values. Note that the function will report failure if when
+wanting to create a user, the desired UID is already taken. But the function
+will not report failure if the user already exists, even with a different UID.
+
+=head2 How to create user without creating a group with the same name as that user?
+
+By default, C<primary_group> is set to the same name as the user. You can set it
+to an existing group, e.g. "users" and the setup function will not create a new
+group with the same name as user.
 
 =head1 SEE ALSO
 

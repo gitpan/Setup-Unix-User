@@ -98,5 +98,11 @@ test_setup_unix_group(
 
 # at this point, existing groups: u1=1000, g2=1001, u2=1002, g3=1003
 
+test_setup_unix_group(
+    name       => "create (nothing done cause group exists)",
+    args       => {name=>"g2", min_new_gid=>1002, max_new_gid=>1002},
+    status     => 304,
+);
+
 DONE_TESTING:
 teardown();
