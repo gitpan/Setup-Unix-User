@@ -3,7 +3,7 @@ NAME
     memberships)
 
 VERSION
-    version 0.07
+    version 0.08
 
 SYNOPSIS
      use Setup::Unix::User 'setup_unix_user';
@@ -29,7 +29,7 @@ DESCRIPTION
 
     This module uses Log::Any logging framework.
 
-    This module's functions have Sub::Spec specs.
+    This module has Rinci metadata.
 
 THE SETUP MODULES FAMILY
     I use the "Setup::" namespace for the Setup modules family. See
@@ -44,6 +44,7 @@ FUNCTIONS
 
     On do, will create Unix user if not already exists. And also make sure
     user belong to specified groups (and not belong to unwanted groups).
+    Return the created UID/GID in the result.
 
     On undo, will delete Unix user (along with its initially created home
     dir and files) if it was created by this function. Also will restore old
@@ -169,7 +170,7 @@ AUTHOR
     Steven Haryanto <stevenharyanto@gmail.com>
 
 COPYRIGHT AND LICENSE
-    This software is copyright (c) 2011 by Steven Haryanto.
+    This software is copyright (c) 2012 by Steven Haryanto.
 
     This is free software; you can redistribute it and/or modify it under
     the same terms as the Perl 5 programming language system itself.

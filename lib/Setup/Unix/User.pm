@@ -17,7 +17,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(setup_unix_user);
 
-our $VERSION = '0.07'; # VERSION
+our $VERSION = '0.08'; # VERSION
 
 our %SPEC;
 
@@ -40,7 +40,8 @@ $SPEC{setup_unix_user} = {
     description => <<'_',
 
 On do, will create Unix user if not already exists. And also make sure user
-belong to specified groups (and not belong to unwanted groups).
+belong to specified groups (and not belong to unwanted groups). Return the
+created UID/GID in the result.
 
 On undo, will delete Unix user (along with its initially created home dir and
 files) if it was created by this function. Also will restore old group
@@ -158,9 +159,9 @@ sub setup_unix_user {
     my $use_skel_dir      = $args{use_skel_dir}      // 1;
     my $skel_dir          = $args{skel_dir}          // "/etc/skel";
     my $primary_group     = $args{primary_group}     // $name;
-    my $member_of         = $args{member_of} // [];
+    my $member_of         = $args{member_of}         // [];
     push @$member_of, $primary_group unless $primary_group ~~ @$member_of;
-    my $not_member_of     = $args{not_member_of} // [];
+    my $not_member_of     = $args{not_member_of}     // [];
     for (@$member_of) {
         return [400, "Group $_ is in member_of and not_member_of"]
             if $_ ~~ @$not_member_of;
@@ -546,7 +547,7 @@ Setup::Unix::User - Setup Unix user (existence, home dir, group memberships)
 
 =head1 VERSION
 
-version 0.07
+version 0.08
 
 =head1 SYNOPSIS
 
@@ -574,7 +575,7 @@ This module is part of the Setup modules family.
 
 This module uses L<Log::Any> logging framework.
 
-This module's functions have L<Sub::Spec> specs.
+This module has L<Rinci> metadata.
 
 =head1 THE SETUP MODULES FAMILY
 
@@ -592,7 +593,8 @@ None are exported by default, but they are exportable.
 Setup Unix user (existence, group memberships).
 
 On do, will create Unix user if not already exists. And also make sure user
-belong to specified groups (and not belong to unwanted groups).
+belong to specified groups (and not belong to unwanted groups). Return the
+created UID/GID in the result.
 
 On undo, will delete Unix user (along with its initially created home dir and
 files) if it was created by this function. Also will restore old group
@@ -725,7 +727,7 @@ Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2011 by Steven Haryanto.
+This software is copyright (c) 2012 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

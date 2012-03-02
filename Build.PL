@@ -6,34 +6,34 @@ use Module::Build 0.3601;
 
 
 my %module_build_args = (
-  'build_requires' => {
-    'Module::Build' => '0.3601'
+  "build_requires" => {
+    "Module::Build" => "0.3601"
   },
-  'configure_requires' => {
-    'Module::Build' => '0.3601'
+  "configure_requires" => {
+    "Module::Build" => "0.3601"
   },
-  'dist_abstract' => 'Setup Unix user (existence, home dir, group memberships)',
-  'dist_author' => [
-    'Steven Haryanto <stevenharyanto@gmail.com>'
+  "dist_abstract" => "Setup Unix user (existence, home dir, group memberships)",
+  "dist_author" => [
+    "Steven Haryanto <stevenharyanto\@gmail.com>"
   ],
-  'dist_name' => 'Setup-Unix-User',
-  'dist_version' => '0.07',
-  'license' => 'perl',
-  'module_name' => 'Setup::Unix::User',
-  'recommends' => {},
-  'recursive_test_files' => 1,
-  'requires' => {
-    'File::Slurp' => '0',
-    'File::chdir' => '0',
-    'Log::Any' => '0',
-    'Passwd::Unix::Alt' => '0.5205',
-    'Setup::File' => '0',
-    'Sub::Spec' => '0.13',
-    'Test::More' => '0.96',
-    'Text::Password::Pronounceable' => '0',
-    'perl' => '5.010000'
+  "dist_name" => "Setup-Unix-User",
+  "dist_version" => "0.08",
+  "license" => "perl",
+  "module_name" => "Setup::Unix::User",
+  "recommends" => {},
+  "recursive_test_files" => 1,
+  "requires" => {
+    "File::Slurp" => 0,
+    "File::chdir" => 0,
+    "Log::Any" => 0,
+    "Passwd::Unix::Alt" => "0.5205",
+    "Rinci" => "1.1.0",
+    "Setup::File" => 0,
+    "Test::More" => "0.96",
+    "Text::Password::Pronounceable" => 0,
+    "perl" => "5.010000"
   },
-  'script_files' => []
+  "script_files" => []
 );
 
 
