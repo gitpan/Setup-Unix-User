@@ -8,6 +8,7 @@ use File::Temp qw(tempdir);
 use Setup::Unix::Group qw(setup_unix_group);
 use Setup::Unix::User  qw(setup_unix_user);
 use Test::More 0.96;
+use Test::Setup qw(test_setup);
 
 my $passwd_path;
 my $shadow_path;
@@ -80,40 +81,27 @@ sub teardown {
 }
 
 sub _test_setup_unix_group_or_file {
-    my ($which, %args) = @_;
-    subtest "$args{name}" => sub {
+    my ($which, %tsuargs) = @_;
 
-        my %setup_args = %{ $args{args} };
-        my $name = $setup_args{name};
-        my $res;
-        eval {
-            $setup_args{_passwd_path}  = $passwd_path;
-            $setup_args{_group_path}   = $group_path;
-            $setup_args{_shadow_path}  = $shadow_path;
-            $setup_args{_gshadow_path} = $gshadow_path;
+    my %tsargs;
+    for (qw/check_state1 check_state2
+            name dry_do_error do_error set_state1 set_state2 prepare cleanup/) {
+        $tsargs{$_} = $tsuargs{$_};
+    }
+    $tsargs{function} = $which eq 'group' ?
+        \&setup_unix_group : \&setup_unix_user;
+    my %fargs = %{ $tsuargs{args} };
+    $fargs{_passwd_path}  = $passwd_path;
+    $fargs{_group_path}   = $group_path;
+    $fargs{_shadow_path}  = $shadow_path;
+    $fargs{_gshadow_path} = $gshadow_path;
+    $tsargs{args} = \%fargs;
 
-            if ($which eq 'user') {
-                $res = setup_unix_user(%setup_args);
-            } else {
-                $setup_args{_group_path} = $group_path;
-                $res = setup_unix_group(%setup_args);
-            }
-        };
-        my $eval_err = $@;
+    my $name = $fargs{name};
+    my $check = sub {
+        my %cargs = @_;
 
-        if ($args{dies}) {
-            ok($eval_err, "dies");
-        } else {
-            ok(!$eval_err, "doesn't die") or diag $eval_err;
-        }
-
-        #diag explain $res;
-        if ($args{status}) {
-            is($res->[0], $args{status}, "status $args{status}")
-                or diag explain($res);
-        }
-
-        my $pu = Passwd::Unix::Alt->new(
+        $::pu = Passwd::Unix::Alt->new(
             passwd  => $passwd_path,
             group   => $group_path,
             shadow  => $shadow_path,
@@ -121,35 +109,61 @@ sub _test_setup_unix_group_or_file {
         );
         my @e;
         if ($which eq 'user') {
-            @e = $pu->user($name);
+            @e = $::pu->user($name);
         } else {
-            @e = $pu->group($name);
+            @e = $::pu->group($name);
         }
+        #diag explain \@e;
 
         my $exists = $e[0] ? 1:0;
 
-        if ($args{exists} // 1) {
+        if ($cargs{exists} // 1) {
             ok($exists, "exists") or return;
-            if ($args{gid}) {
-                is($e[0], $args{gid}, "gid");
-            }
-            if ($args{uid}) {
-                is($e[1], $args{uid}, "uid");
-            }
-            if ($args{gecos}) {
-                is($e[2], $args{uid}, "uid");
-            }
-            if ($args{gecos}) {
-                is($e[3], $args{uid}, "uid");
+            if ($which eq 'user') {
+                if (defined $cargs{uid}) {
+                    is($e[1], $cargs{uid}, "uid");
+                }
+                if (defined $cargs{gid}) {
+                    is($e[2], $cargs{gid}, "gid");
+                }
+            } else {
+                if (defined $cargs{gid}) {
+                    is($e[0], $cargs{gid}, "gid");
+                }
             }
         } else {
             ok(!$exists, "does not exist");
         }
 
-        if ($args{posttest}) {
-            $args{posttest}->($res, $name, $pu);
+        if ($which eq 'user') {
+            if ($cargs{member_of}) {
+                my @g;
+                for my $g (@{ $cargs{member_of} }) {
+                    @g = $::pu->group($g);
+                    ok($g[0] && $name ~~ @{$g[1]}, "user $name is member of $g")
+                        or diag "members of group $g: " . join(" ", @{$g[1]});
+                }
+            }
+            if ($cargs{not_member_of}) {
+                my @g;
+                for my $g (@{ $cargs{not_member_of} }) {
+                    @g = $::pu->group($g);
+                    ok(!$g[0] || !($name ~~ @{$g[1]}),
+                       "user $name is not member of $g")
+                        or diag "members of group $g: " . join(" ", @{$g[1]});
+                }
+            }
+        }
+
+        if ($cargs{extra}) {
+            $cargs{extra}->();
         }
     };
+
+    $tsargs{check_setup}   = sub { $check->(%{$tsuargs{check_setup}}) };
+    $tsargs{check_unsetup} = sub { $check->(%{$tsuargs{check_unsetup}}) };
+
+    test_setup(%tsargs);
 }
 
 sub test_setup_unix_group { _test_setup_unix_group_or_file('group', @_) }

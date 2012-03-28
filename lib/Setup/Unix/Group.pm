@@ -11,7 +11,7 @@ our @EXPORT_OK = qw(setup_unix_group);
 
 use Passwd::Unix::Alt;
 
-our $VERSION = '0.08'; # VERSION
+our $VERSION = '0.09'; # VERSION
 
 our %SPEC;
 
@@ -63,6 +63,7 @@ sub setup_unix_group {
         shadow   => $shadow_path,
         gshadow  => $gshadow_path,
         warnings => 0,
+        #lock     => 1,
     );
 
     my $gid;
@@ -197,7 +198,7 @@ Setup::Unix::Group - Setup Unix group (existence)
 
 =head1 VERSION
 
-version 0.08
+version 0.09
 
 =head1 SYNOPSIS
 
@@ -236,42 +237,6 @@ modules family.
 
 None are exported by default, but they are exportable.
 
-=head2 setup_unix_group(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-
-
-Setup Unix group (existence).
-
-On do, will create Unix group if not already exists. The created GID will be
-returned in the result.
-
-On undo, will delete Unix group previously created.
-
-On redo, will recreate the Unix group with the same GID.
-
-Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error code
-between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing error
-message, RESULT is the actual result.
-
-This function supports undo operation. See L<Sub::Spec::Clause::features> for
-details on how to perform do/undo/redo.
-
-This function supports dry-run (simulation) mode. To run in dry-run mode, add
-argument C<-dry_run> => 1.
-
-Arguments (C<*> denotes required arguments):
-
-=over 4
-
-=item * B<min_new_gid> => I<int> (default C<65534>)
-
-When creating new group, specify maximum GID.
-
-=item * B<name>* => I<str>
-
-Group name.
-
-=back
-
 =head1 FAQ
 
 =head2 How to create group with a specific GID?
@@ -286,6 +251,38 @@ exists, even with a different GID.
 L<Setup::Unix::User>.
 
 Other modules in Setup:: namespace.
+
+=head1 FUNCTIONS
+
+
+=head2 setup_unix_group(%args) -> [status, msg, result, meta]
+
+Setup Unix group (existence).
+
+On do, will create Unix group if not already exists. The created GID will be
+returned in the result.
+
+On undo, will delete Unix group previously created.
+
+On redo, will recreate the Unix group with the same GID.
+
+Arguments ('*' denotes required arguments):
+
+=over 4
+
+=item * B<min_new_gid> => I<int> (default: 65534)
+
+When creating new group, specify maximum GID.
+
+=item * B<name>* => I<str>
+
+Group name.
+
+=back
+
+Return value:
+
+Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
 
 =head1 AUTHOR
 

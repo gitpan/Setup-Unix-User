@@ -3,7 +3,7 @@ NAME
     memberships)
 
 VERSION
-    version 0.08
+    version 0.09
 
 SYNOPSIS
      use Setup::Unix::User 'setup_unix_user';
@@ -39,115 +39,6 @@ THE SETUP MODULES FAMILY
 FUNCTIONS
     None are exported by default, but they are exportable.
 
-  setup_unix_user(%args) -> [STATUS_CODE, ERR_MSG, RESULT]
-    Setup Unix user (existence, group memberships).
-
-    On do, will create Unix user if not already exists. And also make sure
-    user belong to specified groups (and not belong to unwanted groups).
-    Return the created UID/GID in the result.
-
-    On undo, will delete Unix user (along with its initially created home
-    dir and files) if it was created by this function. Also will restore old
-    group memberships.
-
-    Returns a 3-element arrayref. STATUS_CODE is 200 on success, or an error
-    code between 3xx-5xx (just like in HTTP). ERR_MSG is a string containing
-    error message, RESULT is the actual result.
-
-    This function supports undo operation. See Sub::Spec::Clause::features
-    for details on how to perform do/undo/redo.
-
-    This function supports dry-run (simulation) mode. To run in dry-run
-    mode, add argument "-dry_run" => 1.
-
-    Arguments ("*" denotes required arguments):
-
-    *   create_home_dir => *bool* (default 1)
-
-        Whether to create homedir when creating new user.
-
-    *   max_new_gid => *str*
-
-        Set maximum GID when creating new group.
-
-        Default follows max_new_uid
-
-    *   max_new_uid => *str* (default 65534)
-
-        Set maximum UID when creating new user.
-
-    *   member_of => *array*
-
-        List of Unix group names that the user must be member of.
-
-        If not specified, member_of will be set to just the primary group.
-        The primary group will always be added even if not specified.
-
-    *   min_new_gid => *str*
-
-        Set minimum GID when creating new group.
-
-        Default is UID
-
-    *   min_new_uid => *str* (default 0)
-
-        Set minimum UID when creating new user.
-
-    *   name* => *str*
-
-        User name.
-
-    *   new_gecos => *str* (default "")
-
-        Set gecos (usually, full name) when creating new user.
-
-    *   new_home_dir => *str*
-
-        Set home directory when creating new user, defaults to
-        /home/<username>.
-
-    *   new_home_dir_mode => *int* (default 448)
-
-        Set permission mode of home dir when creating new user.
-
-    *   new_password => *str*
-
-        Set password when creating new user.
-
-        Default is a random password
-
-    *   new_shell => *str* (default "/bin/bash")
-
-        Set shell when creating new user.
-
-    *   not_member_of* => *str*
-
-        List of Unix group names that the user must NOT be member of.
-
-    *   primary_group => *str*
-
-        Specify user's primary group.
-
-        In Unix systems, a user must be a member of at least one group. This
-        group is referred to as the primary group. By default, primary group
-        name is the same as the user name. The group will be created if not
-        exists.
-
-    *   should_already_exist => *bool* (default 0)
-
-        If set to true, require that user already exists.
-
-        This can be used to fix user membership, but does not create user
-        when it doesn't exist.
-
-    *   skel_dir => *str* (default "/etc/skel")
-
-        Directory to get skeleton files when creating new user.
-
-    *   use_skel_dir => *bool* (default 1)
-
-        Whether to copy files from skeleton dir when creating new user.
-
 FAQ
   How to create user with a specific UID and/or GID?
     Set "min_new_uid" and "max_new_uid" (and/or "min_new_gid" and
@@ -165,6 +56,115 @@ SEE ALSO
     Setup::Unix::Group.
 
     Other modules in Setup:: namespace.
+
+FUNCTIONS
+  setup_unix_user(%args) -> [status, msg, result, meta]
+    Setup Unix user (existence, group memberships).
+
+    On do, will create Unix user if not already exists. And also make sure
+    user belong to specified groups (and not belong to unwanted groups).
+    Return the created UID/GID in the result.
+
+    On undo, will delete Unix user (along with its initially created home
+    dir and files) if it was created by this function. Also will restore old
+    group memberships.
+
+    Arguments ('*' denotes required arguments):
+
+    *   create_home_dir => *bool* (default: 1)
+
+        Whether to create homedir when creating new user.
+
+    *   max_new_gid => *str*
+
+        Set maximum GID when creating new group.
+
+        Default follows maxnewuid
+
+    *   max_new_uid => *str* (default: 65534)
+
+        Set maximum UID when creating new user.
+
+    *   member_of => *array*
+
+        List of Unix group names that the user must be member of.
+
+        If not specified, member_of will be set to just the primary group.
+        The primary group will always be added even if not specified.
+
+    *   min_new_gid => *str*
+
+        Set minimum GID when creating new group.
+
+        Default is UID
+
+    *   min_new_uid => *str* (default: 0)
+
+        Set minimum UID when creating new user.
+
+    *   name* => *str*
+
+        User name.
+
+    *   new_gecos => *str* (default: "")
+
+        Set gecos (usually, full name) when creating new user.
+
+    *   new_home_dir => *str*
+
+        Set home directory when creating new user, defaults to
+        /home/<username>.
+
+    *   new_home_dir_mode => *int* (default: 448)
+
+        Set permission mode of home dir when creating new user.
+
+    *   new_password => *str*
+
+        Set password when creating new user.
+
+        Default is a random password
+
+    *   new_shell => *str* (default: "/bin/bash")
+
+        Set shell when creating new user.
+
+    *   not_member_of* => *str*
+
+        List of Unix group names that the user must NOT be member of.
+
+    *   primary_group => *str*
+
+        Specify user's primary group.
+
+        In Unix systems, a user must be a member of at least one group. This
+        group is referred to as the primary group. By default, primary group
+        name is the same as the user name. The group will be created if not
+        exists.
+
+    *   should_already_exist => *bool* (default: 0)
+
+        If set to true, require that user already exists.
+
+        This can be used to fix user membership, but does not create user
+        when it doesn't exist.
+
+    *   skel_dir => *str* (default: "/etc/skel")
+
+        Directory to get skeleton files when creating new user.
+
+    *   use_skel_dir => *bool* (default: 1)
+
+        Whether to copy files from skeleton dir when creating new user.
+
+    Return value:
+
+    Returns an enveloped result (an array). First element (status) is an
+    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
+    function error). Second element (msg) is a string containing error
+    message, or 'OK' if status is 200. Third element (result) is optional,
+    the actual result. Fourth element (meta) is called result metadata and
+    is optional, a hash that contains extra information.
 
 AUTHOR
     Steven Haryanto <stevenharyanto@gmail.com>

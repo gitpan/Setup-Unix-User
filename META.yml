@@ -17,13 +17,15 @@ requires:
   File::Slurp: 0
   File::chdir: 0
   Log::Any: 0
-  Passwd::Unix::Alt: 0.5205
+  Passwd::Unix::Alt: 0.5210
   Rinci: 1.1.0
+  Setup: 1.0.0
   Setup::File: 0
   Test::More: 0.96
+  Test::Setup: 1.01
   Text::Password::Pronounceable: 0
   perl: 5.010000
 resources:
   homepage: http://search.cpan.org/dist/Setup-Unix-User/
   repository: http://github.com/sharyanto/perl-Setup-Unix-User
-version: 0.08
+version: 0.09

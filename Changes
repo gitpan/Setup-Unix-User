@@ -1,5 +1,14 @@
 Revision history for Setup-Unix-User
 
+0.09    2012-03-29
+
+        - Fix: Ignore membership to non-existant group.
+
+        - Use Test::Setup.
+
+        - build: Replace SubSpec PodWeaver plugin with Perinci.
+
+
 0.08    2012-03-02
 
         No functional changes. Replace Sub::Spec with Rinci.
