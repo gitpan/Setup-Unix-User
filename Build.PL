@@ -7,7 +7,13 @@ use Module::Build 0.3601;
 
 my %module_build_args = (
   "build_requires" => {
-    "Module::Build" => "0.3601"
+    "Crypt::Password::Util" => 0,
+    "File::Copy::Recursive" => 0,
+    "File::Slurp" => 0,
+    "File::chdir" => 0,
+    "Module::Build" => "0.3601",
+    "Test::More" => "0.98",
+    "Test::Perinci::Tx::Manager" => 0
   },
   "configure_requires" => {
     "Module::Build" => "0.3601"
@@ -17,23 +23,22 @@ my %module_build_args = (
     "Steven Haryanto <stevenharyanto\@gmail.com>"
   ],
   "dist_name" => "Setup-Unix-User",
-  "dist_version" => "0.09",
+  "dist_version" => "0.10",
   "license" => "perl",
   "module_name" => "Setup::Unix::User",
   "recommends" => {},
   "recursive_test_files" => 1,
   "requires" => {
-    "File::Slurp" => 0,
-    "File::chdir" => 0,
+    "File::Copy::Undoable" => "0.02",
+    "File::Trash::Undoable" => 0,
     "Log::Any" => 0,
-    "Passwd::Unix::Alt" => "0.5210",
-    "Rinci" => "1.1.0",
-    "Setup" => "1.0.0",
+    "PerlX::Maybe" => 0,
+    "Rinci" => "v1.1.28",
+    "Setup" => "v1.0.3",
     "Setup::File" => 0,
-    "Test::More" => "0.96",
-    "Test::Setup" => "1.01",
     "Text::Password::Pronounceable" => 0,
-    "perl" => "5.010000"
+    "Unix::Passwd::File" => "0.07",
+    "perl" => "5.010001"
   },
   "script_files" => []
 );

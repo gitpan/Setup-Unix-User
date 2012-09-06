@@ -9,18 +9,179 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(setup_unix_group);
 
-use Passwd::Unix::Alt;
+use PerlX::Maybe;
+use Unix::Passwd::File;
 
-our $VERSION = '0.09'; # VERSION
+our $VERSION = '0.10'; # VERSION
 
 our %SPEC;
 
+my %common_args = (
+    etc_dir => {
+        summary => 'Location of passwd files',
+        schema  => ['str*' => {default=>'/etc'}],
+    },
+    group => {
+        schema  => 'str*',
+        summary => 'Group name',
+    },
+);
+
+$SPEC{delgroup} = {
+    v => 1.1,
+    summary => 'Delete group',
+    description => <<'_',
+
+Fixed state: group does not exist.
+
+Fixable state: group exists.
+
+_
+    args => {
+        %common_args,
+    },
+    features => {
+        tx => {v=>2},
+        idempotent => 1,
+    },
+};
+sub delgroup {
+    my %args = @_;
+
+    my $tx_action = $args{-tx_action} // '';
+    my $dry_run   = $args{-tx_action} // '';
+    my $group     = $args{group} or return [400, "Please specify group"];
+    $group =~ $Unix::Passwd::File::re_group
+        or return [400, "Invalid group"];
+    my %ca        = (etc_dir => $args{etc_dir}, group=>$group);
+    my $res;
+
+    if ($tx_action eq 'check_state') {
+        my $res = Unix::Passwd::File::get_group(%ca);
+        return $res unless $res->[0] == 200 || $res->[0] == 404;
+
+        return [304, "Group $group already doesn't exist"] if $res->[0] == 404;
+        $log->info("(DRY) Deleting Unix group $group ...") if $dry_run;
+        return [200, "Group $group needs to be deleted", undef, {undo_actions=>[
+            [addgroup => {%ca, gid => $res->[2]{gid}}],
+        ]}];
+    } elsif ($tx_action eq 'fix_state') {
+        # we don't want to have to get_group() when fixing state, to reduce
+        # number of read passes to the passwd files
+        $log->info("Deleting Unix group $group ...");
+        return Unix::Passwd::File::delete_group(%ca);
+    }
+    [400, "Invalid -tx_action"];
+}
+
+$SPEC{addgroup} = {
+    v => 1.1,
+    summary => 'Add group',
+    args => {
+        %common_args,
+        gid => {
+            summary => 'Add with specified GID',
+            description => <<'_',
+
+If not specified, will search an unused GID from `min_new_gid` to `max_new_gid`.
+
+If specified, will accept non-unique GID (that which has been used by other
+group).
+
+_
+            schema => 'int',
+        },
+        min_gid => {
+            summary => 'Specify range for new GID',
+            description => <<'_',
+
+If a free GID between `min_gid` and `max_gid` is not available, an error is
+returned.
+
+Passed to Unix::Passwd::File's `min_new_gid`.
+
+_
+            schema => [int => {between=>[0, 65535], default=>1000}],
+        },
+        max_gid => {
+            summary => 'Specify range for new GID',
+            description => <<'_',
+
+If a free GID between `min_gid` and `max_gid` is not available, an error is
+returned.
+
+Passed to Unix::Passwd::File's `max_new_gid`.
+
+_
+            schema => [int => {between=>[0, 65535], default=>65534}],
+        },
+    },
+    features => {
+        tx => {v=>2},
+        idempotent => 1,
+    },
+};
+sub addgroup {
+    my %args = @_;
+
+    my $tx_action = $args{-tx_action} // '';
+    my $dry_run   = $args{-dry_run};
+    my $group     = $args{group} or return [400, "Please specify group"];
+    $group =~ $Unix::Passwd::File::re_group
+        or return [400, "Invalid group"];
+    my $gid       = $args{gid};
+    my $min_gid   = $args{min_gid} //  1000;
+    my $max_gid   = $args{max_gid} // 65534;
+    my %ca0       = (etc_dir => $args{etc_dir});
+    my %ca        = (%ca0, group=>$group);
+    my $res;
+
+    if ($tx_action eq 'check_state') {
+        $res = Unix::Passwd::File::get_group(%ca);
+        return $res unless $res->[0] == 200 || $res->[0] == 404;
+
+        if ($res->[0] == 200) {
+            if (!defined($gid) || $gid == $res->[2]{gid}) {
+                return [304, "Group $group already exists"];
+            } else {
+                return [412, "Group $group already exists but with different ".
+                            "GID ($res->[2]{gid}, wanted $gid)"];
+            }
+        } else {
+            $log->info("(DRY) Adding Unix group $group ...") if $dry_run;
+            return [200, "Group $group needs to be added", undef,
+                    {undo_actions=>[
+                        [delgroup => {%ca}],
+            ]}];
+        }
+    } elsif ($tx_action eq 'fix_state') {
+        # we don't want to have to get_group() when fixing state, to reduce
+        # number of read passes to the passwd files
+        $log->info("Adding Unix group $group ...");
+        $res = Unix::Passwd::File::add_group(
+            %ca,
+            maybe gid     => $gid,
+            min_gid => $min_gid,
+            max_gid => $max_gid);
+        if ($res->[0] == 200) {
+            $args{-stash}{result}{gid} = $res->[2]{gid};
+            return [200, "Created"];
+        } else {
+            return $res;
+        }
+    }
+    [400, "Invalid -tx_action"];
+}
+
 $SPEC{setup_unix_group} = {
-    summary  => "Setup Unix group (existence)",
+    v           => 1.1,
+    summary     => "Setup Unix group (existence)",
     description => <<'_',
 
 On do, will create Unix group if not already exists. The created GID will be
-returned in the result.
+returned in the result (`{gid => GID}`). If `should_already_exist` is set to
+true, won't create but only require that group already exists. If `should_exist`
+is set to false, will delete existing group instead of creating it.
 
 On undo, will delete Unix group previously created.
 
@@ -28,168 +189,80 @@ On redo, will recreate the Unix group with the same GID.
 
 _
     args => {
-        name => ['str*' => {
-            summary => 'Group name',
-        }],
-        min_new_gid => ['int' => {
-            summary => 'When creating new group, specify minimum GID',
-            default => 0,
-        }],
-        min_new_gid => ['int' => {
-            summary => 'When creating new group, specify maximum GID',
-            default => 65534,
-        }],
+        should_exit => {
+            summary => 'Whether group should exist',
+            schema  => [bool => {default=>1}],
+        },
+        should_already_exist => {
+            summary => 'Whether group should already exist',
+            schema  => 'bool',
+        },
+        %{ $SPEC{addgroup}{args} },
     },
-    features => {undo=>1, dry_run=>1},
+    features => {
+        tx => {v=>2},
+        idempotent => 1,
+    },
 };
-sub setup_unix_group {
-    my %args           = @_;
-    my $dry_run        = $args{-dry_run};
-    my $undo_action    = $args{-undo_action} // "";
-
-    # check args
-    my $name           = $args{name};
-    $name or return [400, "Please specify name"];
-    $name =~ /^[A-Za-z0-9_-]+$/ or return [400, "Invalid group name syntax"];
-
-    # create PUA object
-    my $passwd_path  = $args{_passwd_path}  // "/etc/passwd";
-    my $group_path   = $args{_group_path}   // "/etc/group";
-    my $shadow_path  = $args{_shadow_path}  // "/etc/shadow";
-    my $gshadow_path = $args{_gshadow_path} // "/etc/gshadow";
-    my $pu = Passwd::Unix::Alt->new(
-        passwd   => $passwd_path,
-        group    => $group_path,
-        shadow   => $shadow_path,
-        gshadow  => $gshadow_path,
-        warnings => 0,
-        #lock     => 1,
-    );
-
-    my $gid;
-
-    # collect steps
-    my $steps;
-    if ($undo_action eq 'undo') {
-        $steps = $args{-undo_data} or return [400, "Please supply -undo_data"];
-    } else {
-        $steps = [];
-        {
-            my @g = $pu->group($name);
-            return [500, "Can't get Unix group: $Passwd::Unix::Alt::errstr"]
-                if $Passwd::Unix::Alt::errstr &&
-                    $Passwd::Unix::Alt::errstr !~ /unknown group/i;
-            if (!$g[0]) {
-                $log->info("nok: unix group $name doesn't exist");
-                push @$steps, ["create"];
-                last;
-            }
-        }
-    }
-
-    return [400, "Invalid steps, must be an array"]
-        unless $steps && ref($steps) eq 'ARRAY';
-    return [200, "Dry run"] if $dry_run && @$steps;
-
-    my $save_undo = $undo_action ? 1:0;
-
-    # perform the steps
-    my $rollback;
-    my $undo_steps = [];
-  STEP:
-    for my $i (0..@$steps-1) {
-        my $step = $steps->[$i];
-        $log->tracef("step %d of 0..%d: %s", $i, @$steps-1, $step);
-        my $err;
-        return [400, "Invalid step (not array)"] unless ref($step) eq 'ARRAY';
-
-        my @g = $pu->group($name);
-        if ($Passwd::Unix::Alt::errstr &&
-                $Passwd::Unix::Alt::errstr !~ /unknown group/i) {
-            $err = "Can't check group entry: $Passwd::Unix::Alt::errstr";
-            goto CHECK_ERR;
-        }
-        if ($step->[0] eq 'create') {
-            $gid = $step->[1];
-            if ($g[0]) {
-                if (!defined($gid)) {
-                    # group already exists, skip step
-                    next STEP;
-                } elsif ($gid ne $g[0]) {
-                    $err = "Group already exists but with different GID $g[0]".
-                        " (we need to create GID $g[0])";
-                }
-            } else {
-                my $found = defined($gid);
-                if (!$found) {
-                    $log->trace("finding an unused GID ...");
-                    my @gids = map {($pu->group($_))[0]} $pu->groups;
-                    #$log->tracef("gids = %s", \@gids);
-                    my $max;
-                    # we shall search a range for a free gid
-                    $gid = $args{min_new_gid} // 1;
-                    $max = $args{max_new_gid} // 65535;
-                    while (1) {
-                        last if $gid > $max;
-                        unless ($gid ~~ @gids) {
-                            $log->tracef("found unused GID: %d", $gid);
-                            $found++;
-                            last;
-                        }
-                        $gid++;
-                    }
-                }
-                if (!$found) {
-                    $err = "Can't find unused GID";
-                    goto CHECK_ERR;
-                }
-                $pu->group($name, $gid, []);
-                if ($Passwd::Unix::Alt::errstr) {
-                    $err = "Can't add group entry in $group_path: ".
-                        "$Passwd::Unix::Alt::errstr";
-                } else {
-                    unshift @$undo_steps, ["delete", $gid];
-                }
-            }
-        } elsif ($step->[0] eq 'delete') {
-            if (!$g[0]) {
-                # group doesn't exist, skip this step
-                next STEP;
-            }
-            $pu->del_group($name);
-            if ($Passwd::Unix::Alt::errstr) {
-                $err = $Passwd::Unix::Alt::errstr;
-            } else {
-                unshift @$undo_steps, ['create', $g[0]];
-            }
-        } else {
-            die "BUG: Unknown step command: $step->[0]";
-        }
-      CHECK_ERR:
-        if ($err) {
-            if ($rollback) {
-                die "Failed rollback step $i of 0..".(@$steps-1).": $err";
-            } else {
-                $log->tracef("Step failed: $err, performing rollback (%s)...",
-                             $undo_steps);
-                $rollback = $err;
-                $steps = $undo_steps;
-                goto STEP; # perform steps all over again
-            }
-        }
-    }
-    return [500, "Error (rollbacked): $rollback"] if $rollback;
-
-    my $data = {gid=>$gid};
-    my $meta = {};
-    $meta->{undo_data} = $undo_steps if $save_undo;
-    $log->tracef("meta: %s", $meta);
-    return [@$steps ? 200 : 304, @$steps ? "OK" : "Nothing done", $data, $meta];
+for (qw/setup_unix_group/) {
+    $SPEC{$_}{args}{min_new_gid} = delete $SPEC{$_}{args}{min_gid};
+    $SPEC{$_}{args}{max_new_gid} = delete $SPEC{$_}{args}{max_gid};
+    $SPEC{$_}{args}{new_gid}     = delete $SPEC{$_}{args}{gid};
 }
+sub setup_unix_group {
+    my %args = @_;
+
+    # TMP, schema
+    my $dry_run       = $args{-dry_run};
+    my $group         = $args{group} or return [400, "Please specify group"];
+    $group =~ $Unix::Passwd::File::re_group
+        or return [400, "Invalid group"];
+    my $should_exist  = $args{should_exist} // 1;
+    my $should_aexist = $args{should_already_exist};
+    my %ca            = (etc_dir=>$args{etc_dir}, group=>$group);
+
+    my $exists = Unix::Passwd::File::group_exists(%ca);
+    my (@do, @undo);
+
+    #$log->tracef("group=%s, exists=%s, should_exist=%s, ", $group, $exists, $should_exist);
+    if ($exists) {
+        if (!$should_exist) {
+            $log->info("(DRY) Deleting group $group ...");
+            push    @do  , [delgroup=>{%ca}];
+            unshift @undo, [addgroup=>{
+                %ca,
+                maybe gid     => $args{new_gid},
+                maybe min_gid => $args{min_new_gid},
+                maybe max_gid => $args{max_new_gid},
+            }];
+        }
+    } else {
+        if ($should_aexist) {
+            return [412, "Group $group should already exist"];
+        } elsif ($should_exist) {
+            $log->info("(DRY) Adding group $group ...");
+            push    @do  , [addgroup=>{
+                %ca,
+                maybe gid     => $args{new_gid},
+                maybe min_gid => $args{min_new_gid},
+                maybe max_gid => $args{max_new_gid},
+            }];
+            unshift @do  , [delgroup=>{%ca}];
+        }
+    }
+
+    if (@do) {
+        return [200, "", undef, {do_actions=>\@do, undo_actions=>\@undo}];
+    } else {
+        return [304, "Already fixed"];
+    }
+}
+
 1;
 # ABSTRACT: Setup Unix group (existence)
 
 
+__END__
 =pod
 
 =head1 NAME
@@ -198,85 +271,247 @@ Setup::Unix::Group - Setup Unix group (existence)
 
 =head1 VERSION
 
-version 0.09
-
-=head1 SYNOPSIS
-
- use Setup::Unix::Group 'setup_unix_group';
-
- # simple usage (doesn't save undo data)
- my $res = setup_unix_group name => 'foo';
- die unless $res->[0] == 200 || $res->[0] == 304;
-
- # perform setup and save undo data (undo data should be serializable)
- $res = setup_unix_group ..., -undo_action => 'do';
- die unless $res->[0] == 200 || $res->[0] == 304;
- my $undo_data = $res->[3]{undo_data};
-
- # perform undo
- $res = setup_unix_group ..., -undo_action => "undo", -undo_data=>$undo_data;
- die unless $res->[0] == 200 || $res->[0] == 304;
-
-=head1 DESCRIPTION
-
-This module provides one function: B<setup_unix_group>.
-
-This module is part of the Setup modules family.
-
-This module uses L<Log::Any> logging framework.
-
-This module has L<Rinci> metadata.
-
-=head1 THE SETUP MODULES FAMILY
-
-I use the C<Setup::> namespace for the Setup modules family. See L<Setup::File>
-for more details on the goals, characteristics, and implementation of Setup
-modules family.
-
-=head1 FUNCTIONS
-
-None are exported by default, but they are exportable.
+version 0.10
 
 =head1 FAQ
 
-=head2 How to create group with a specific GID?
-
-Set C<min_new_gid> and C<max_new_gid> to your desired value. Note that the
-function will report failure if when wanting to create a group, the desired GID
-is already taken. But the function will not report failure if the group already
-exists, even with a different GID.
-
 =head1 SEE ALSO
 
-L<Setup::Unix::User>.
+L<Setup>
 
-Other modules in Setup:: namespace.
+L<Setup::Unix::User>
+
+=head1 DESCRIPTION
+
+
+This module has L<Rinci> metadata.
 
 =head1 FUNCTIONS
 
+
+None are exported by default, but they are exportable.
+
+=head2 addgroup(%args) -> [status, msg, result, meta]
+
+Add group.
+
+This function is idempotent (repeated invocations with same arguments has the same effect as single invocation). This function supports transactions.
+
+
+Arguments ('*' denotes required arguments):
+
+=over 4
+
+=item * B<etc_dir> => I<str> (default: "/etc")
+
+Location of passwd files.
+
+=item * B<gid> => I<int>
+
+Add with specified GID.
+
+If not specified, will search an unused GID from C<min_new_gid> to C<max_new_gid>.
+
+If specified, will accept non-unique GID (that which has been used by other
+group).
+
+=item * B<group> => I<str>
+
+Group name.
+
+=item * B<max_gid> => I<int> (default: 65534)
+
+Specify range for new GID.
+
+If a free GID between C<min_gid> and C<max_gid> is not available, an error is
+returned.
+
+Passed to Unix::Passwd::File's C<max_new_gid>.
+
+=item * B<min_gid> => I<int> (default: 1000)
+
+Specify range for new GID.
+
+If a free GID between C<min_gid> and C<max_gid> is not available, an error is
+returned.
+
+Passed to Unix::Passwd::File's C<min_new_gid>.
+
+=back
+
+Special arguments:
+
+=over 4
+
+=item * B<-tx_action> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_action_id> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_recovery> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_rollback> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_v> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=back
+
+Return value:
+
+Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
+
+=head2 delgroup(%args) -> [status, msg, result, meta]
+
+Delete group.
+
+Fixed state: group does not exist.
+
+Fixable state: group exists.
+
+This function is idempotent (repeated invocations with same arguments has the same effect as single invocation). This function supports transactions.
+
+
+Arguments ('*' denotes required arguments):
+
+=over 4
+
+=item * B<etc_dir> => I<str> (default: "/etc")
+
+Location of passwd files.
+
+=item * B<group> => I<str>
+
+Group name.
+
+=back
+
+Special arguments:
+
+=over 4
+
+=item * B<-tx_action> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_action_id> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_recovery> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_rollback> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_v> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=back
+
+Return value:
+
+Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
 
 =head2 setup_unix_group(%args) -> [status, msg, result, meta]
 
 Setup Unix group (existence).
 
 On do, will create Unix group if not already exists. The created GID will be
-returned in the result.
+returned in the result (C<{gid => GID}>). If C<should_already_exist> is set to
+true, won't create but only require that group already exists. If C<should_exist>
+is set to false, will delete existing group instead of creating it.
 
 On undo, will delete Unix group previously created.
 
 On redo, will recreate the Unix group with the same GID.
 
+This function is idempotent (repeated invocations with same arguments has the same effect as single invocation). This function supports transactions.
+
+
 Arguments ('*' denotes required arguments):
 
 =over 4
 
-=item * B<min_new_gid> => I<int> (default: 65534)
+=item * B<etc_dir> => I<str> (default: "/etc")
 
-When creating new group, specify maximum GID.
+Location of passwd files.
 
-=item * B<name>* => I<str>
+=item * B<group> => I<str>
 
 Group name.
+
+=item * B<max_new_gid> => I<int> (default: 65534)
+
+Specify range for new GID.
+
+If a free GID between C<min_gid> and C<max_gid> is not available, an error is
+returned.
+
+Passed to Unix::Passwd::File's C<max_new_gid>.
+
+=item * B<min_new_gid> => I<int> (default: 1000)
+
+Specify range for new GID.
+
+If a free GID between C<min_gid> and C<max_gid> is not available, an error is
+returned.
+
+Passed to Unix::Passwd::File's C<min_new_gid>.
+
+=item * B<new_gid> => I<int>
+
+Add with specified GID.
+
+If not specified, will search an unused GID from C<min_new_gid> to C<max_new_gid>.
+
+If specified, will accept non-unique GID (that which has been used by other
+group).
+
+=item * B<should_already_exist> => I<bool>
+
+Whether group should already exist.
+
+=item * B<should_exit> => I<bool> (default: 1)
+
+Whether group should exist.
+
+=back
+
+Special arguments:
+
+=over 4
+
+=item * B<-tx_action> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_action_id> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_recovery> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_rollback> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
+
+=item * B<-tx_v> => I<str>
+
+For more information on transaction, see L<Rinci::Transaction>.
 
 =back
 
@@ -296,7 +531,4 @@ This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-
-
-__END__
 

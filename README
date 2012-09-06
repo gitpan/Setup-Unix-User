@@ -3,61 +3,206 @@ NAME
     memberships)
 
 VERSION
-    version 0.09
+    version 0.10
 
-SYNOPSIS
-     use Setup::Unix::User 'setup_unix_user';
+FAQ
+  How to create user without creating a group with the same name as that user?
+    By default, "group" is set to the same name as the user. This will
+    create group with the same name as the user (if the group didn't exist).
+    You can set "group" to an existing group, e.g. "users" and the setup
+    function will not create a new group with the same name as user. But
+    note that the group must already exist (if it does not, you can create
+    it first using Setup::Unix::Group).
 
-     # simple usage (doesn't save undo data)
-     my $res = setup_unix_user name => 'foo',
-                               member_of => ['admin', 'wheel'];
-     die unless $res->[0] == 200 || $res->[0] == 304;
+SEE ALSO
+    Setup
 
-     # perform setup and save undo data (undo data should be serializable)
-     $res = setup_unix_user ..., -undo_action => 'do';
-     die unless $res->[0] == 200 || $res->[0] == 304;
-     my $undo_data = $res->[3]{undo_data};
-
-     # perform undo
-     $res = setup_unix_user ..., -undo_action => "undo", -undo_data=>$undo_data;
-     die unless $res->[0] == 200 || $res->[0] == 304;
+    Setup::Unix::Group
 
 DESCRIPTION
-    This module provides one function: setup_unix_user.
-
-    This module is part of the Setup modules family.
-
-    This module uses Log::Any logging framework.
-
     This module has Rinci metadata.
-
-THE SETUP MODULES FAMILY
-    I use the "Setup::" namespace for the Setup modules family. See
-    Setup::File for more details on the goals, characteristics, and
-    implementation of Setup modules family.
 
 FUNCTIONS
     None are exported by default, but they are exportable.
 
-FAQ
-  How to create user with a specific UID and/or GID?
-    Set "min_new_uid" and "max_new_uid" (and/or "min_new_gid" and
-    "max_new_gid") to your desired values. Note that the function will
-    report failure if when wanting to create a user, the desired UID is
-    already taken. But the function will not report failure if the user
-    already exists, even with a different UID.
+  add_delete_user_groups(%args) -> [status, msg, result, meta]
+    Add/delete user from group memberships.
 
-  How to create user without creating a group with the same name as that user?
-    By default, "primary_group" is set to the same name as the user. You can
-    set it to an existing group, e.g. "users" and the setup function will
-    not create a new group with the same name as user.
+    This function is idempotent (repeated invocations with same arguments
+    has the same effect as single invocation). This function supports
+    transactions.
 
-SEE ALSO
-    Setup::Unix::Group.
+    Arguments ('*' denotes required arguments):
 
-    Other modules in Setup:: namespace.
+    *   add_to* => *array*
 
-FUNCTIONS
+    *   delete_from* => *array*
+
+    *   etc_dir => *str* (default: "/etc")
+
+        Location of passwd files.
+
+    *   user => *str*
+
+        User name.
+
+    Special arguments:
+
+    *   -tx_action => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_action_id => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_recovery => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_rollback => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_v => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    Return value:
+
+    Returns an enveloped result (an array). First element (status) is an
+    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
+    function error). Second element (msg) is a string containing error
+    message, or 'OK' if status is 200. Third element (result) is optional,
+    the actual result. Fourth element (meta) is called result metadata and
+    is optional, a hash that contains extra information.
+
+  adduser(%args) -> [status, msg, result, meta]
+    Add user.
+
+    This function is idempotent (repeated invocations with same arguments
+    has the same effect as single invocation). This function supports
+    transactions.
+
+    Arguments ('*' denotes required arguments):
+
+    *   etc_dir => *str* (default: "/etc")
+
+        Location of passwd files.
+
+    *   gecos => *str*
+
+    *   gid => *int*
+
+        When creating group, use specific GID.
+
+        If not specified, will search an unused GID from "min_gid" to
+        "max_gid".
+
+    *   home => *str*
+
+    *   max_gid => *int* (default: 65534)
+
+    *   max_uid => *int* (default: 65534)
+
+    *   min_gid => *int* (default: 1000)
+
+    *   min_uid => *int* (default: 1000)
+
+    *   pass => *str*
+
+    *   shell => *str*
+
+    *   uid => *int*
+
+        Add with specified UID.
+
+        If not specified, will search an unused UID from "min_uid" to
+        "max_uid".
+
+    *   user => *str*
+
+        User name.
+
+    Special arguments:
+
+    *   -tx_action => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_action_id => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_recovery => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_rollback => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_v => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    Return value:
+
+    Returns an enveloped result (an array). First element (status) is an
+    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
+    function error). Second element (msg) is a string containing error
+    message, or 'OK' if status is 200. Third element (result) is optional,
+    the actual result. Fourth element (meta) is called result metadata and
+    is optional, a hash that contains extra information.
+
+  deluser(%args) -> [status, msg, result, meta]
+    Delete user.
+
+    This function is idempotent (repeated invocations with same arguments
+    has the same effect as single invocation). This function supports
+    transactions.
+
+    Arguments ('*' denotes required arguments):
+
+    *   etc_dir => *str* (default: "/etc")
+
+        Location of passwd files.
+
+    *   user => *str*
+
+        User name.
+
+    Special arguments:
+
+    *   -tx_action => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_action_id => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_recovery => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_rollback => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_v => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    Return value:
+
+    Returns an enveloped result (an array). First element (status) is an
+    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
+    function error). Second element (msg) is a string containing error
+    message, or 'OK' if status is 200. Third element (result) is optional,
+    the actual result. Fourth element (meta) is called result metadata and
+    is optional, a hash that contains extra information.
+
   setup_unix_user(%args) -> [status, msg, result, meta]
     Setup Unix user (existence, group memberships).
 
@@ -69,21 +214,15 @@ FUNCTIONS
     dir and files) if it was created by this function. Also will restore old
     group memberships.
 
+    This function is idempotent (repeated invocations with same arguments
+    has the same effect as single invocation). This function supports
+    transactions.
+
     Arguments ('*' denotes required arguments):
 
-    *   create_home_dir => *bool* (default: 1)
+    *   create_home => *bool* (default: 1)
 
-        Whether to create homedir when creating new user.
-
-    *   max_new_gid => *str*
-
-        Set maximum GID when creating new group.
-
-        Default follows maxnewuid
-
-    *   max_new_uid => *str* (default: 65534)
-
-        Set maximum UID when creating new user.
+        Whether to create home directory when creating user.
 
     *   member_of => *array*
 
@@ -92,70 +231,81 @@ FUNCTIONS
         If not specified, member_of will be set to just the primary group.
         The primary group will always be added even if not specified.
 
-    *   min_new_gid => *str*
+    *   new_gecos => *str*
 
-        Set minimum GID when creating new group.
+    *   new_gid => *int*
 
-        Default is UID
+        When creating group, use specific GID.
 
-    *   min_new_uid => *str* (default: 0)
+        If not specified, will search an unused GID from "min_gid" to
+        "max_gid".
 
-        Set minimum UID when creating new user.
+    *   new_home => *str*
 
-    *   name* => *str*
+    *   new_max_gid => *int* (default: 65534)
 
-        User name.
+    *   new_max_uid => *int* (default: 65534)
 
-    *   new_gecos => *str* (default: "")
+    *   new_min_gid => *int* (default: 1000)
 
-        Set gecos (usually, full name) when creating new user.
+    *   new_min_uid => *int* (default: 1000)
 
-    *   new_home_dir => *str*
+    *   new_pass => *str*
 
-        Set home directory when creating new user, defaults to
-        /home/<username>.
+    *   new_shell => *str*
 
-    *   new_home_dir_mode => *int* (default: 448)
+    *   new_uid => *int*
 
-        Set permission mode of home dir when creating new user.
+        Add with specified UID.
 
-    *   new_password => *str*
+        If not specified, will search an unused UID from "min_uid" to
+        "max_uid".
 
-        Set password when creating new user.
-
-        Default is a random password
-
-    *   new_shell => *str* (default: "/bin/bash")
-
-        Set shell when creating new user.
-
-    *   not_member_of* => *str*
+    *   not_member_of => *array*
 
         List of Unix group names that the user must NOT be member of.
 
-    *   primary_group => *str*
+    *   should_already_exist => *bool*
 
-        Specify user's primary group.
+        Whether user should already exist.
 
-        In Unix systems, a user must be a member of at least one group. This
-        group is referred to as the primary group. By default, primary group
-        name is the same as the user name. The group will be created if not
-        exists.
+    *   should_exist => *bool* (default: 1)
 
-    *   should_already_exist => *bool* (default: 0)
-
-        If set to true, require that user already exists.
-
-        This can be used to fix user membership, but does not create user
-        when it doesn't exist.
+        Whether user should exist.
 
     *   skel_dir => *str* (default: "/etc/skel")
 
-        Directory to get skeleton files when creating new user.
+        Directory to get skeleton files when creating user.
 
-    *   use_skel_dir => *bool* (default: 1)
+    *   use_skel => *bool* (default: 1)
 
-        Whether to copy files from skeleton dir when creating new user.
+        Whether to copy files from skeleton dir when creating user.
+
+    *   user => *str*
+
+        User name.
+
+    Special arguments:
+
+    *   -tx_action => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_action_id => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_recovery => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_rollback => *str*
+
+        For more information on transaction, see Rinci::Transaction.
+
+    *   -tx_v => *str*
+
+        For more information on transaction, see Rinci::Transaction.
 
     Return value:
 

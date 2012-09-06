@@ -1,0 +1,61 @@
+{
+   "abstract" : "Setup Unix user (existence, home dir, group memberships)",
+   "author" : [
+      "Steven Haryanto <stevenharyanto@gmail.com>"
+   ],
+   "dynamic_config" : 0,
+   "generated_by" : "Dist::Zilla version 4.300006, CPAN::Meta::Converter version 2.113640",
+   "license" : [
+      "perl_5"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "Setup-Unix-User",
+   "prereqs" : {
+      "build" : {
+         "requires" : {
+            "Module::Build" : "0.3601"
+         }
+      },
+      "configure" : {
+         "requires" : {
+            "Module::Build" : "0.3601"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "File::Copy::Undoable" : "0.02",
+            "File::Trash::Undoable" : 0,
+            "Log::Any" : 0,
+            "PerlX::Maybe" : 0,
+            "Rinci" : "v1.1.28",
+            "Setup" : "v1.0.3",
+            "Setup::File" : 0,
+            "Text::Password::Pronounceable" : 0,
+            "Unix::Passwd::File" : "0.07",
+            "perl" : "5.010001"
+         }
+      },
+      "test" : {
+         "requires" : {
+            "Crypt::Password::Util" : 0,
+            "File::Copy::Recursive" : 0,
+            "File::Slurp" : 0,
+            "File::chdir" : 0,
+            "Test::More" : "0.98",
+            "Test::Perinci::Tx::Manager" : 0
+         }
+      }
+   },
+   "release_status" : "stable",
+   "resources" : {
+      "homepage" : "http://search.cpan.org/dist/Setup-Unix-User/",
+      "repository" : {
+         "url" : "http://github.com/sharyanto/perl-Setup-Unix-User"
+      }
+   },
+   "version" : "0.10"
+}
+
