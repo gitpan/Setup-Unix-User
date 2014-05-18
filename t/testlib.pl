@@ -5,7 +5,7 @@ use Log::Any '$log';
 
 use File::chdir;
 use File::Path qw(remove_tree);
-use File::Slurp;
+use File::Slurp::Tiny qw(write_file);
 use File::Temp qw(tempdir);
 use Setup::Unix::Group qw(setup_unix_group);
 use Setup::Unix::User  qw(setup_unix_user);

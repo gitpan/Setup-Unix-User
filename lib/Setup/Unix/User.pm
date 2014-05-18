@@ -1,8 +1,9 @@
 package Setup::Unix::User;
 
-use 5.010;
+use 5.010001;
 use strict;
 use warnings;
+use experimental 'smartmatch';
 use Log::Any '$log';
 
 use List::Util qw(first);
@@ -14,7 +15,7 @@ require Exporter;
 our @ISA       = qw(Exporter);
 our @EXPORT_OK = qw(setup_unix_user);
 
-our $VERSION = '0.10'; # VERSION
+our $VERSION = '0.11'; # VERSION
 
 our %SPEC;
 
@@ -122,6 +123,10 @@ $SPEC{adduser} = {
     args => {
         %common_args,
         %adduser_args,
+        group       => {
+            schema  => 'str*',
+            summary => 'Group name',
+        },
     },
     features => {
         tx => {v=>2},
@@ -279,10 +284,7 @@ memberships.
 
 _
     args => {
-        user => {
-            schema => 'str*',
-            summary => 'User name',
-        },
+        %common_args,
         should_exist => {
             schema => ['bool' => {default => 1}],
             summary => 'Whether user should exist',
@@ -326,6 +328,18 @@ _
             schema  => [str => {default => '/etc/skel'}],
             summary => 'Directory to get skeleton files when creating user',
         },
+        group       => {
+            schema  => 'str*',
+            summary => 'Group name',
+        },
+        min_uid     => {},
+        max_uid     => {},
+        min_new_uid => {},
+        max_new_uid => {},
+        min_gid     => {},
+        max_gid     => {},
+        min_new_gid => {},
+        max_new_gid => {},
     },
     features => {
         tx => {v=>2},
@@ -479,9 +493,11 @@ sub setup_unix_user {
 1;
 # ABSTRACT: Setup Unix user (existence, home dir, group memberships)
 
-
 __END__
+
 =pod
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -489,33 +505,10 @@ Setup::Unix::User - Setup Unix user (existence, home dir, group memberships)
 
 =head1 VERSION
 
-version 0.10
-
-=head1 FAQ
-
-=head2 How to create user without creating a group with the same name as that user?
-
-By default, C<group> is set to the same name as the user. This will create group
-with the same name as the user (if the group didn't exist). You can set C<group>
-to an existing group, e.g. C<users> and the setup function will not create a new
-group with the same name as user. But note that the group must already exist (if
-it does not, you can create it first using L<Setup::Unix::Group>).
-
-=head1 SEE ALSO
-
-L<Setup>
-
-L<Setup::Unix::Group>
-
-=head1 DESCRIPTION
-
-
-This module has L<Rinci> metadata.
+This document describes version 0.11 of Setup::Unix::User (from Perl distribution Setup-Unix-User), released on 2014-05-18.
 
 =head1 FUNCTIONS
 
-
-None are exported by default, but they are exportable.
 
 =head2 add_delete_user_groups(%args) -> [status, msg, result, meta]
 
@@ -570,7 +563,15 @@ For more information on transaction, see L<Rinci::Transaction>.
 
 Return value:
 
-Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
+Returns an enveloped result (an array).
+
+First element (status) is an integer containing HTTP status code
+(200 means OK, 4xx caller error, 5xx function error). Second element
+(msg) is a string containing error message, or 'OK' if status is
+200. Third element (result) is optional, the actual result. Fourth
+element (meta) is called result metadata and is optional, a hash
+that contains extra information.
+
 
 =head2 adduser(%args) -> [status, msg, result, meta]
 
@@ -594,6 +595,10 @@ Location of passwd files.
 When creating group, use specific GID.
 
 If not specified, will search an unused GID from C<min_gid> to C<max_gid>.
+
+=item * B<group> => I<str>
+
+Group name.
 
 =item * B<home> => I<str>
 
@@ -649,7 +654,15 @@ For more information on transaction, see L<Rinci::Transaction>.
 
 Return value:
 
-Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
+Returns an enveloped result (an array).
+
+First element (status) is an integer containing HTTP status code
+(200 means OK, 4xx caller error, 5xx function error). Second element
+(msg) is a string containing error message, or 'OK' if status is
+200. Third element (result) is optional, the actual result. Fourth
+element (meta) is called result metadata and is optional, a hash
+that contains extra information.
+
 
 =head2 deluser(%args) -> [status, msg, result, meta]
 
@@ -700,7 +713,15 @@ For more information on transaction, see L<Rinci::Transaction>.
 
 Return value:
 
-Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
+Returns an enveloped result (an array).
+
+First element (status) is an integer containing HTTP status code
+(200 means OK, 4xx caller error, 5xx function error). Second element
+(msg) is a string containing error message, or 'OK' if status is
+200. Third element (result) is optional, the actual result. Fourth
+element (meta) is called result metadata and is optional, a hash
+that contains extra information.
+
 
 =head2 setup_unix_user(%args) -> [status, msg, result, meta]
 
@@ -725,12 +746,36 @@ Arguments ('*' denotes required arguments):
 
 Whether to create home directory when creating user.
 
+=item * B<etc_dir> => I<str> (default: "/etc")
+
+Location of passwd files.
+
+=item * B<group> => I<str>
+
+Group name.
+
+=item * B<max_gid> => I<any>
+
+=item * B<max_new_gid> => I<any>
+
+=item * B<max_new_uid> => I<any>
+
+=item * B<max_uid> => I<any>
+
 =item * B<member_of> => I<array>
 
 List of Unix group names that the user must be member of.
 
 If not specified, member_of will be set to just the primary group. The primary
 group will always be added even if not specified.
+
+=item * B<min_gid> => I<any>
+
+=item * B<min_new_gid> => I<any>
+
+=item * B<min_new_uid> => I<any>
+
+=item * B<min_uid> => I<any>
 
 =item * B<new_gecos> => I<str>
 
@@ -814,7 +859,46 @@ For more information on transaction, see L<Rinci::Transaction>.
 
 Return value:
 
-Returns an enveloped result (an array). First element (status) is an integer containing HTTP status code (200 means OK, 4xx caller error, 5xx function error). Second element (msg) is a string containing error message, or 'OK' if status is 200. Third element (result) is optional, the actual result. Fourth element (meta) is called result metadata and is optional, a hash that contains extra information.
+Returns an enveloped result (an array).
+
+First element (status) is an integer containing HTTP status code
+(200 means OK, 4xx caller error, 5xx function error). Second element
+(msg) is a string containing error message, or 'OK' if status is
+200. Third element (result) is optional, the actual result. Fourth
+element (meta) is called result metadata and is optional, a hash
+that contains extra information.
+
+=head1 FAQ
+
+=head2 How to create user without creating a group with the same name as that user?
+
+By default, C<group> is set to the same name as the user. This will create group
+with the same name as the user (if the group didn't exist). You can set C<group>
+to an existing group, e.g. C<users> and the setup function will not create a new
+group with the same name as user. But note that the group must already exist (if
+it does not, you can create it first using L<Setup::Unix::Group>).
+
+=head1 SEE ALSO
+
+L<Setup>
+
+L<Setup::Unix::Group>
+
+=head1 HOMEPAGE
+
+Please visit the project's homepage at L<https://metacpan.org/release/Setup-Unix-User>.
+
+=head1 SOURCE
+
+Source repository is at L<https://github.com/sharyanto/perl-Setup-Unix-User>.
+
+=head1 BUGS
+
+Please report any bugs or feature requests on the bugtracker website L<https://rt.cpan.org/Public/Dist/Display.html?Name=Setup-Unix-User>
+
+When submitting a bug or request, please include a test-file or a
+patch to an existing test-file that illustrates the bug or desired
+feature.
 
 =head1 AUTHOR
 
@@ -822,10 +906,9 @@ Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Steven Haryanto.
+This software is copyright (c) 2014 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

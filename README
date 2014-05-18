@@ -3,28 +3,10 @@ NAME
     memberships)
 
 VERSION
-    version 0.10
-
-FAQ
-  How to create user without creating a group with the same name as that user?
-    By default, "group" is set to the same name as the user. This will
-    create group with the same name as the user (if the group didn't exist).
-    You can set "group" to an existing group, e.g. "users" and the setup
-    function will not create a new group with the same name as user. But
-    note that the group must already exist (if it does not, you can create
-    it first using Setup::Unix::Group).
-
-SEE ALSO
-    Setup
-
-    Setup::Unix::Group
-
-DESCRIPTION
-    This module has Rinci metadata.
+    This document describes version 0.11 of Setup::Unix::User (from Perl
+    distribution Setup-Unix-User), released on 2014-05-18.
 
 FUNCTIONS
-    None are exported by default, but they are exportable.
-
   add_delete_user_groups(%args) -> [status, msg, result, meta]
     Add/delete user from group memberships.
 
@@ -70,12 +52,14 @@ FUNCTIONS
 
     Return value:
 
-    Returns an enveloped result (an array). First element (status) is an
-    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
-    function error). Second element (msg) is a string containing error
-    message, or 'OK' if status is 200. Third element (result) is optional,
-    the actual result. Fourth element (meta) is called result metadata and
-    is optional, a hash that contains extra information.
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
 
   adduser(%args) -> [status, msg, result, meta]
     Add user.
@@ -98,6 +82,10 @@ FUNCTIONS
 
         If not specified, will search an unused GID from "min_gid" to
         "max_gid".
+
+    *   group => *str*
+
+        Group name.
 
     *   home => *str*
 
@@ -148,12 +136,14 @@ FUNCTIONS
 
     Return value:
 
-    Returns an enveloped result (an array). First element (status) is an
-    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
-    function error). Second element (msg) is a string containing error
-    message, or 'OK' if status is 200. Third element (result) is optional,
-    the actual result. Fourth element (meta) is called result metadata and
-    is optional, a hash that contains extra information.
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
 
   deluser(%args) -> [status, msg, result, meta]
     Delete user.
@@ -196,12 +186,14 @@ FUNCTIONS
 
     Return value:
 
-    Returns an enveloped result (an array). First element (status) is an
-    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
-    function error). Second element (msg) is a string containing error
-    message, or 'OK' if status is 200. Third element (result) is optional,
-    the actual result. Fourth element (meta) is called result metadata and
-    is optional, a hash that contains extra information.
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
 
   setup_unix_user(%args) -> [status, msg, result, meta]
     Setup Unix user (existence, group memberships).
@@ -224,12 +216,36 @@ FUNCTIONS
 
         Whether to create home directory when creating user.
 
+    *   etc_dir => *str* (default: "/etc")
+
+        Location of passwd files.
+
+    *   group => *str*
+
+        Group name.
+
+    *   max_gid => *any*
+
+    *   max_new_gid => *any*
+
+    *   max_new_uid => *any*
+
+    *   max_uid => *any*
+
     *   member_of => *array*
 
         List of Unix group names that the user must be member of.
 
         If not specified, member_of will be set to just the primary group.
         The primary group will always be added even if not specified.
+
+    *   min_gid => *any*
+
+    *   min_new_gid => *any*
+
+    *   min_new_uid => *any*
+
+    *   min_uid => *any*
 
     *   new_gecos => *str*
 
@@ -309,18 +325,49 @@ FUNCTIONS
 
     Return value:
 
-    Returns an enveloped result (an array). First element (status) is an
-    integer containing HTTP status code (200 means OK, 4xx caller error, 5xx
-    function error). Second element (msg) is a string containing error
-    message, or 'OK' if status is 200. Third element (result) is optional,
-    the actual result. Fourth element (meta) is called result metadata and
-    is optional, a hash that contains extra information.
+    Returns an enveloped result (an array).
+
+    First element (status) is an integer containing HTTP status code (200
+    means OK, 4xx caller error, 5xx function error). Second element (msg) is
+    a string containing error message, or 'OK' if status is 200. Third
+    element (result) is optional, the actual result. Fourth element (meta)
+    is called result metadata and is optional, a hash that contains extra
+    information.
+
+FAQ
+  How to create user without creating a group with the same name as that user?
+    By default, "group" is set to the same name as the user. This will
+    create group with the same name as the user (if the group didn't exist).
+    You can set "group" to an existing group, e.g. "users" and the setup
+    function will not create a new group with the same name as user. But
+    note that the group must already exist (if it does not, you can create
+    it first using Setup::Unix::Group).
+
+SEE ALSO
+    Setup
+
+    Setup::Unix::Group
+
+HOMEPAGE
+    Please visit the project's homepage at
+    <https://metacpan.org/release/Setup-Unix-User>.
+
+SOURCE
+    Source repository is at
+    <https://github.com/sharyanto/perl-Setup-Unix-User>.
+
+BUGS
+    Please report any bugs or feature requests on the bugtracker website
+    <https://rt.cpan.org/Public/Dist/Display.html?Name=Setup-Unix-User>
+
+    When submitting a bug or request, please include a test-file or a patch
+    to an existing test-file that illustrates the bug or desired feature.
 
 AUTHOR
     Steven Haryanto <stevenharyanto@gmail.com>
 
 COPYRIGHT AND LICENSE
-    This software is copyright (c) 2012 by Steven Haryanto.
+    This software is copyright (c) 2014 by Steven Haryanto.
 
     This is free software; you can redistribute it and/or modify it under
     the same terms as the Perl 5 programming language system itself.
